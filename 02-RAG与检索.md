@@ -4,7 +4,7 @@
 
 > 考检索链路是否真做过：分块、召回、重排、引用可信、失败归因。注意区分「做过知识库」和「做过 agent」。
 
-> 题目为**英文原文**（源仓库 Apache-2.0），**答案为中文整理**。每条附 `Source` 时给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
+> 题干与答案均为中文；英文原题保存在每题的 `<!-- EN: -->` 注释里（渲染时不可见），可与源仓库逐字核对。有 `Source` 的题给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
 
 ## 目录
 
@@ -89,7 +89,7 @@
 
 <!-- EN: What is a reranker, when should you use one, and what does a cross-encoder cost you? -->
 
-**Asked at**: Cohere · Microsoft · Perplexity · 京东 · 阿里巴巴
+**Asked at**: Cohere · Microsoft · Perplexity · 京东 · 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -103,7 +103,7 @@
 
 所以标准做法是两段式：**ANN 召回 top-50~100 → cross-encoder 精排 top-5**。
 
-什么时候别用：延迟敏感的交互路径、k 很大、或者首命中精度本来就够。两个都要实测——常见情况是重排把 Recall@3 从 0.92 抬到 0.96，同时把 P95 从约 90 ms 拉到 1.7 s。**它该按场景开关，而不是默认打开。**
+什么时候别用：延迟敏感的交互路径、k 很大、或者首命中精度本来就够。两个都要实测——重排通常把 nDCG 和中段召回抬几个点，**Recall@3 这类头部指标的提升往往更小**（头部本来就排对了）；代价是把 P95 按前文那个 10–20 倍的倍数放大，绝对值取决于候选数、模型和硬件（可对照本库 Cohere 那道两阶段检索题的量级：50 对候选在 GPU 上几十毫秒、CPU 上几百毫秒），必须在自己的候选规模上测。**它该按场景开关，而不是默认打开。**
 
 **速记**：cross-encoder 逐对打分精度高但延迟是 N 倍；标准做法是 ANN 粗召回 50~100 再精排 top-5；实测常见"提升中段召回但 P95 放大 10~20 倍"，要按场景开关而不是默认开。
 
@@ -223,7 +223,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 <!-- EN: Compare HNSW, IVF-PQ and flat indexes. How do you pick, and what does recall@k cost in latency? -->
 
 **Asked at**: 腾讯 · 美团 · 京东
-**Source**: https://outcomeschool.com/blog/how-does-approximate-nearest-neighbor-ann-search-work
+**Source**: https://outcomeschool.com/blog/how-does-approximate-nearest-neighbor-ann-search-work and https://outcomeschool.com/blog/how-does-a-vector-database-work
 
 **参考答案**
 
@@ -314,6 +314,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: You have an embedding model and a reranker. Why sell both? Design the two-stage retrieval pipeline and tell me when the reranker earns its latency. -->
 
+**Asked at**: Cohere
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -337,31 +338,34 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: An enterprise wants semantic search over ~100M documents but is balking at vector-index cost. Walk me through embedding compression options and the maths. -->
 
+**Asked at**: Cohere
 **Source**: https://outcomeschool.com/blog/how-does-a-vector-database-work
 
 **参考答案**
 
-先算原始数字，因为客户通常是被这个数字吓到的：`1 亿 × 1024 维 × 4 B = 410 GB` 纯向量，还没算 HNSW 图的邻居表（通常 +30–60%）和副本。
+先算原始数字，因为客户通常是被这个数字吓到的：`1 亿 × 1024 维 × 4 B = 410 GB` 纯向量，还没算 HNSW 图的邻居表和副本。图的邻居表按 `M` 算：layer-0 每向量约 `2M` 个 4 B 的邻居 id，`M=32` 时约 256 B——相对 1024 维 fp32 的 4096 B 只有 **+6%**，但相对 256 维 int8 的 256 B 就是 **+100%**。所以降维之后必须重算图的比例，别沿用降维前的百分比。
 
 | 技术 | 1 亿 × 1024 维 | 召回影响 | 工程量 |
 | :--- | :--- | :--- | :--- |
 | fp32（基线） | ~410 GB | — | 无 |
 | fp16 | ~205 GB | ~0 | 极小 |
 | **int8 标量** | ~102 GB | ~0.5–2 pt | 小（逐维 scale） |
-| **Matryoshka 截断 1024→256** | ~102 GB（int8）/ ~25 GB（二值） | 1–3 pt | 需要 MRL 训练的模型 |
+| **Matryoshka 截断 1024→256** | 256 维 int8 = 100M×256 B = **~25.6 GB**；256 维二值 = 100M×32 B = **~3.2 GB** | 1–3 pt | 需要 MRL 训练的模型 |
 | **二值（1 bit/维）** | ~12.8 GB | 3–10 pt，可用重排找回 | 中 |
 | **PQ（m=64, 8 bit）** | ~6.4 GB | 不重排时 5–15 pt | 高（要训码本） |
 | IVF + PQ 落盘 | 内存 GB 级 | 取决于 nprobe | 运维复杂 |
 
-几乎总是最优的组合是：**int8 + Matryoshka 512 维 + 二值首轮召回、top-1000 用 int8 重排**。这样常驻内存约 25 GB，召回只比 fp32 差几个点，因为重排把二值量化的损失捞了回来。
+几乎总是最优的组合是：**int8 + Matryoshka 降到 256 维**（常驻 ~25.6 GB），再叠一层 256 维二值（100M × 32 B = ~3.2 GB）做首轮召回，top-1000 用 int8 向量重排。两级索引合计约 **29 GB**，召回只比 fp32 差几个点，因为重排把二值量化的损失捞了回来。若客户坚持留 512 维，int8 就是 100M × 512 B = **51.2 GB**——int8 下每多留一维就是 100 MB，这是最容易讲给采购听懂的一句。
 
 必须跟客户说两件事：索引不是唯一成本——**入库要重嵌 1 亿文档**，那笔一次性账单通常更大；以及召回必须**实测**而不是假设。建 500 条带标注的 query 集，画 recall@10 对内存的曲线。如果他们连 500 条都标不出来，任何方案都无法验证。
 
-**速记**：1 亿×1024 维 fp32 ≈ 410 GB；压缩路线 int8 → Matryoshka 降维 → 二值首轮 + int8 重排，可到 ~25 GB 且召回只差几点；别忘重嵌入成本。
+**速记**：1 亿×1024 维 fp32 ≈ 410 GB；压缩路线 int8 → Matryoshka 降维 → 二值首轮 + int8 重排：256 维 int8 ≈ 25.6 GB、256 维二值 ≈ 3.2 GB（512 维 int8 则 ≈ 51.2 GB），两级合计 ~29 GB 且召回只差几点；HNSW 邻居表按 M 单独算（M=32 ≈ 256 B/向量，降维后占比会翻倍）；别忘重嵌入成本。
 
 ### 3. 当员工用法语和韩语提问、而文档主要是英文时，你如何评估多语言检索质量？
 
 <!-- EN: How would you evaluate multilingual retrieval quality when employees query in French and Korean over mostly-English documents? -->
+
+**Asked at**: Cohere
 
 **参考答案**
 
@@ -391,6 +395,8 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: A customer 10x'd their indexed documents and reports answer quality “got noticeably worse.” Drive the investigation. -->
 
+**Asked at**: Cohere
+
 **参考答案**
 
 模型没变而质量掉了，说明回归在**检索或上下文拼装**。10 倍规模同时改变四件事，按"检查最便宜"的顺序逐个隔离：
@@ -419,6 +425,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: For a long-context assistant, when is a 1M-token context window the right tool, and when should you use retrieval instead? -->
 
+**Asked at**: Moonshot AI
 **Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms
 
 **参考答案**
@@ -448,6 +455,8 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 ### 1. 设计跨语言 RAG：知识库是英文和印地语，但用户用泰米尔语、泰卢固语或拉丁字母转写的 Hinglish 提问。
 
 <!-- EN: Design cross-lingual RAG: the knowledge base is in English and Hindi, but users ask in Tamil, Telugu or transliterated Hinglish. -->
+
+**Asked at**: Sarvam AI
 
 **参考答案**
 
@@ -529,7 +538,6 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 <!-- EN: Permission-aware knowledge base: filter by ACL before retrieval, or after? How do you monitor and prove no unauthorised content was retrieved? -->
 
 **Asked at**: 字节跳动
-**Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
 
@@ -555,7 +563,6 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 <!-- EN: When should the system trigger a web search and when should it answer directly? How do you tell "the model did not know it needed retrieval" from "it knew but did not execute"? -->
 
 **Asked at**: 字节跳动
-**Source**: https://outcomeschool.com/blog/ai-agent-loop
 
 **参考答案**
 
@@ -641,7 +648,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 <!-- EN: What drives the choice of BGE as an embedding model, and how do you build and tune a FAISS index? -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/how-does-a-vector-database-work
+**Source**: https://outcomeschool.com/blog/how-does-a-vector-database-work and https://outcomeschool.com/blog/how-does-approximate-nearest-neighbor-ann-search-work
 
 **参考答案**
 
@@ -696,7 +703,6 @@ FAISS 索引构建与调优：
 <!-- EN: What if one generation has to reason across several documents? -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
 
@@ -759,6 +765,7 @@ FAISS 索引构建与调优：
 
 <!-- EN: How do chunking, BM25 plus dense hybrid retrieval, multi-hop retrieval and query rewriting fit into one pipeline? -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work and https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -771,7 +778,7 @@ FAISS 索引构建与调优：
 | **增强** | 每块摘要、关键词、假设性问题、元数据 | 增强内容偏离原文 |
 | **建索引** | BM25（稀疏）+ 稠密向量，同一套 doc id、同一个 ACL 字段 | 两个索引不同步 |
 | **查询改写** | 拆解多部分问题、展开缩写、HyDE、按历史消解代词 | 破坏精确匹配类查询（错误码、SKU） |
-| **混合检索** | BM25 top-100 ∪ 稠密 top-100，用 RRF 融合 | 分数量纲不同（BM25 无上界，余弦 0–1），朴素加权求和会失败 |
+| **混合检索** | BM25 top-100 ∪ 稠密 top-100，用 RRF 融合 | 分数量纲不同（BM25 无上界，余弦 `[-1,1]`，归一化文本嵌入实测多落在 0–1），朴素加权求和会失败 |
 | **重排** | cross-encoder 把 top-50 压到 top-5..8 | 延迟：cross-encoder 是 bi-encoder 的 10–100 倍 |
 
 **多跳**不是一个阶段，而是套在检索外面的循环：如果召回的上下文里出现了问题依赖却未被解答的桥接实体（"**那个**档位的政策"），就用第一次结果派生出第二个查询。上限 2–3 跳——无界多跳是 RAG 成本和跑偏的主要来源。
@@ -785,6 +792,8 @@ FAISS 索引构建与调优：
 ### 2. 设计一个带 ACL 和 PII 处理的企业知识库。权限过滤应该放在哪一层？
 
 <!-- EN: Design an enterprise knowledge base with ACLs and PII. Where does permission filtering live? -->
+
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 
 **参考答案**
 
@@ -812,6 +821,7 @@ PII：入库时检测（结构化标识符用正则 + 人名/地址用 NER），
 
 <!-- EN: How do long-conversation summarisation and the harness data flow fit together? -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/how-does-context-compaction-work
 
 **参考答案**
@@ -850,6 +860,8 @@ PII：入库时检测（结构化标识符用正则 + 人名/地址用 NER），
 
 <!-- EN: Why introduce RAG at all? Which LLM problems does it actually solve? -->
 
+**Asked at**: 滴滴
+
 **参考答案**
 
 RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才变化的事、不可能知道你的私有数据、也不可能给自己引用出处。**
@@ -877,6 +889,7 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: Where did your data come from and how was it constructed? Walk me through chunking, retrieval and evaluation. -->
 
+**Asked at**: 滴滴
 **Source**: https://outcomeschool.com/blog/chunking-strategies-for-rag
 
 **参考答案**
@@ -907,6 +920,8 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: Would you put a driver's history and preferences into a knowledge base (RAG) or into fine-tuning? Why? -->
 
+**Asked at**: 滴滴
+
 **参考答案**
 
 大部分内容两个都不该放——而敢这么说，正是这道题的考点。
@@ -930,6 +945,8 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: In Elasticsearch, how do you balance indexing depth against query speed, and do you need hot/cold separation? -->
 
+**Asked at**: 滴滴
+
 **参考答案**
 
 索引深度是**你为降低查询成本而付出的写入成本**，可调的杠杆是明确的：
@@ -939,11 +956,11 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 | 更多 analyzed 字段 / 分析器 | ↑ | 文本召回更好 |
 | 保留 `doc_values` / `norms` | ↑ 磁盘 | 排序/聚合 vs 打分需要 |
 | 不用的字段设 `index: false` | ↓ | 无影响——纯收益 |
-| 降低 `refresh_interval`（1s） | ↑↑ | 只影响可见性延迟，不影响速度 |
+| 调小 `refresh_interval`（默认 1s，例如 200ms） | ↑↑（刷新更频繁，小段更多） | 近实时可见性更好，查询速度不变 |
 | 更多分片 | ↑（每片开销） | 并行度更高，再多就变差 |
 | `forcemerge` 到更少段 | 一次性 ↑ | 搜索更快、堆占用更少 |
 
-生产上成立的规则：单片目标 **10–50 GB**，分片数大致对齐搜索并发，`refresh_interval` 设 30s（批量装载期间设 `-1`），除非实时可见性是产品需求；以及最大的那一笔——**不要索引你从不查询的东西**（无用对象设 `enabled: false`，payload 字段设 `index: false`）。
+生产上成立的规则：单片目标 **10–50 GB**，分片数大致对齐搜索并发，`refresh_interval` 往**反方向**调大——设 30s（批量装载期间设 `-1`），写成本随之下降，代价是文档可见性延迟到 30s（或装载完手动 refresh 一次），除非实时可见性本身是产品需求；以及最大的那一笔——**不要索引你从不查询的东西**（无用对象设 `enabled: false`，payload 字段设 `index: false`）。
 
 **热冷分层**：对有**保留期的时序数据**（日志、行程事件、审计流水）需要：hot（SSD、正在写、≥1 副本）→ warm（force-merge 过、副本更少）→ cold（可搜索快照 / 对象存储上的 frozen 层）→ 由 ILM 删除。成本节省主要来自分层策略，而不是查询调优。
 
@@ -955,6 +972,7 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: If you use Elasticsearch as a vector store, how do you combine vector and keyword search? -->
 
+**Asked at**: 滴滴
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -988,6 +1006,7 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: Why do you need a reranker, and when can you skip it? -->
 
+**Asked at**: 京东
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -1011,6 +1030,7 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: How do you evaluate recall and precision for hybrid retrieval, and should RRF's k be larger or smaller? -->
 
+**Asked at**: 京东
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -1034,6 +1054,8 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 <!-- EN: Using Elasticsearch as a vector store, how do you combine vector and keyword retrieval, and how do you shard RAG? -->
 
+**Asked at**: 京东
+
 **参考答案**
 
 组合方式，按优先级：
@@ -1043,17 +1065,20 @@ RAG 之所以存在，是因为**冻结的模型不可能知道训练之后才�
 
 ES 上最容易搞错的几点：
 
-- 带 filter 的 `knn` 是**在 HNSW 内部后置过滤**：`num_candidates` 必须远大于 k，否则召回静默崩塌。设 `num_candidates ≈ 10 × k` 并实测。
+- filter 写在 `knn` 子句**内部**就是**前置过滤（prefilter）**：ES 用 BitSet 在 HNSW 遍历时逐个候选校验，召回不会塌，代价是图遍历变慢；过滤条件极强时它会自动退化成精确扫描（够快，但不再是近似检索）。真正会"返回少于 k 条"的是把过滤放在 `knn` 外面或 `post_filter` 上。
+- **`num_candidates`** 是召回/延迟旋钮，不是硬门槛：每分片候选数（默认按 k 推），调大召回更好、延迟更高；过滤越强越要调大。要的是实测你那套 filter 的 recall–P95 曲线，而不是背一个 10×k 的常数。
 - 向量维度与 `similarity` 在 mapping 时定死；换 embedding 模型等于**新建字段 + 重建索引**，所以第一天就要规划版本化别名（`products_v3` 挂在 `products_read` 后面）。
 - 关键词侧靠分析器：中文商品标题需要 IK 类分词器加同义词/别名词典，否则 BM25 召回差，混合检索只是继承这个差。
 
 分片：若有一半查询带类目过滤，就按**租户或类目**分片而不是哈希——路由能避免 scatter-gather。单分片控制在 10–50 GB，把热索引（近期、小）和冷索引（归档）分开，让工作集留在 page cache。RAG 场景要把块文本和向量放在同一文档，命中后不必二次取。
 
-**速记**：优先用 ES 原生 hybrid 一次查询做 RRF 融合；knn 的 filter 是后置过滤，`num_candidates` 要给到 10×k 否则召回静默崩塌；换 embedding 必须新建字段+别名切换；按租户/类目分片。
+**速记**：优先用 ES 原生 hybrid 一次查询做 RRF 融合；knn 的 filter 写在子句内是**前置过滤**（保召回、但遍历变慢，过滤极强时退化精确扫描），放在子句外/post_filter 才会返回不足 k 条，`num_candidates` 是召回/延迟旋钮；换 embedding 必须新建字段+别名切换；按租户/类目分片。
 
 ### 4. 为 RAG 服务设计一套降级策略。什么会触发降级？
 
 <!-- EN: Design the degradation strategy for a RAG service. What triggers it? -->
+
+**Asked at**: 京东
 
 **参考答案**
 
@@ -1081,6 +1106,7 @@ ES 上最容易搞错的几点：
 
 <!-- EN: Which database do you use for agent memory, and why? -->
 
+**Asked at**: 京东
 **Source**: https://outcomeschool.com/blog/ai-agent-memory
 
 **参考答案**
@@ -1109,6 +1135,7 @@ Redis 只放热工作集，绝不做 system of record，因为那里的淘汰是
 
 <!-- EN: How does BM25 work, and why add dense retrieval on top? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -1139,6 +1166,8 @@ $$\text{score}(q,d)=\sum_{t\in q}\text{IDF}(t)\cdot\frac{f(t,d)\,(k_1+1)}{f(t,d)
 
 <!-- EN: Long reviews are summarised before indexing. How do you make sure the summary does not lose information, and how do multi-level summaries plus source quotes fit? -->
 
+**Asked at**: 美团
+
 **参考答案**
 
 不要用摘要替换原文——**摘要做路由，答案回原文引用**。
@@ -1167,6 +1196,8 @@ $$\text{score}(q,d)=\sum_{t\in q}\text{IDF}(t)\cdot\frac{f(t,d)\,(k_1+1)}{f(t,d)
 
 <!-- EN: p95 latency jumps in production. How do you debug it? -->
 
+**Asked at**: 美团
+
 **参考答案**
 
 p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有请求都变慢了。这把范围锁死在排队与异质性上。
@@ -1191,6 +1222,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: RAG recall is too low. What do you do, and how do you tell a retrieval problem from a generation problem? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/llm-evaluation
 
 **参考答案**
@@ -1226,7 +1258,8 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: Discuss reranker architecture choices: cross-encoder, ColBERT, LLM-based. -->
 
-**Source**: https://outcomeschool.com/blog/how-does-a-reranker-work ; https://outcomeschool.com/blog/decoding-colbert
+**Asked at**: Perplexity
+**Source**: https://outcomeschool.com/blog/how-does-a-reranker-work and https://outcomeschool.com/blog/decoding-colbert
 
 **参考答案**
 
@@ -1260,6 +1293,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: You retrieved 50 candidate passages but the model's useful context budget is ~10. How do you choose, and how do you know your choices are good? -->
 
+**Asked at**: Perplexity
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -1297,7 +1331,8 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: Long context windows keep getting cheaper. Why not drop retrieval and stuff the whole repo into context for every request? -->
 
-**Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms · https://outcomeschool.com/blog/how-does-cursor-work
+**Asked at**: Cursor
+**Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms and https://outcomeschool.com/blog/how-does-cursor-work
 
 **参考答案**
 
@@ -1321,6 +1356,8 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 ### 1. agent 基于客户知识库作答，而该知识库中既有过时文章也有相互矛盾的文章。你如何防止它自信地给出错误答案？
 
 <!-- EN: The agent answers from a customer's knowledge base, which contains outdated and contradictory articles. How do you prevent confidently wrong answers? -->
+
+**Asked at**: Sierra
 
 **参考答案**
 
@@ -1349,6 +1386,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: A lawyer asks about a 200-page credit agreement where the operative clause on page 140 depends on a defined term on page 8. How do you build retrieval that gets this right? -->
 
+**Asked at**: Harvey
 **Source**: https://outcomeschool.com/blog/chunking-strategies-for-rag
 
 **参考答案**
@@ -1372,6 +1410,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: When would you put a whole contract in the context window instead of retrieving over it? Defend the answer with numbers. -->
 
+**Asked at**: Harvey
 **Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms
 
 **参考答案**
@@ -1398,6 +1437,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: How would you chunk and embed heterogeneous enterprise content: Slack threads, Jira tickets, Google Docs, PDFs? -->
 
+**Asked at**: Glean
 **Source**: https://outcomeschool.com/blog/chunking-strategies-for-rag
 
 **参考答案**
@@ -1421,6 +1461,7 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: Why is RAG the right architecture for an enterprise assistant instead of fine-tuning on the company's data? Where does RAG break? -->
 
+**Asked at**: Glean
 **Source**: https://www.youtube.com/watch?v=lnfWvX66FUk
 
 **参考答案**
@@ -1458,6 +1499,8 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 
 <!-- EN: The patient's chart already lists their medications. How would you use that to improve transcription of drug names, and how would you keep it from backfiring? -->
 
+**Asked at**: Abridge
+
 **参考答案**
 
 机制：**上下文偏置（contextual biasing）**——把每次就诊的热词表注入 ASR 解码器（trie 上的 shallow fusion，或 logit 加权），而不是事后做字符串替换。
@@ -1491,6 +1534,8 @@ p95 涨而 p50 平，说明**尾部是被某处制造出来的**，不是所有�
 ### 1. 用户问“有多少未结订单因供应商问题被卡住？”普通 RAG 会答错。为什么？正确的架构是什么？
 
 <!-- EN: Users ask “how many open orders are blocked on a supplier issue?” Plain RAG gets this wrong. Why, and what's the right architecture? -->
+
+**Asked at**: Palantir
 
 **参考答案**
 

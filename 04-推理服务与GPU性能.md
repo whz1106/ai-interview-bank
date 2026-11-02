@@ -4,7 +4,7 @@
 
 > 考显存账、批处理、KV 管理、并行策略与延迟预算。数字题最能问出真踩过坑的人。
 
-> 题目为**英文原文**（源仓库 Apache-2.0），**答案为中文整理**。每条附 `Source` 时给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
+> 题干与答案均为中文；英文原题保存在每题的 `<!-- EN: -->` 注释里（渲染时不可见），可与源仓库逐字核对。有 `Source` 的题给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
 
 ## 目录
 
@@ -54,7 +54,7 @@
 
 prefill 一次前向吃下整个提示：一个 `[T, d] × [d, d]` 的 GEMM，每个从 HBM 读来的权重字节被复用 `T` 次。算术强度随提示长度增长——8k token 时是数千 FLOP/byte，远高于 H100 的拐点（BF16 约 295 FLOP/byte），所以瓶颈在张量核。
 
-decode 每步**每条序列只出一个 token**：同样的权重被完整重读一遍却只产出一个 token，约 2 FLOP/byte。张量核空转，tok/s ≈ `HBM 带宽 / 权重字节`。这就是为什么 70B BF16 单卡无论 ALU 多快都只有 20–40 tok/s，也是为什么批处理是重回算力密度的唯一办法——批为 `B` 时，一次权重读取喂 `B` 个 token。
+decode 每步**每条序列只出一个 token**：同样的权重被完整重读一遍却只产出一个 token，算术强度约 **1 FLOP/byte**（BF16 口径：每参数 2 FLOP ÷ 2 B；若权重压到 FP8，同一秒数下就只有 1 B 要读，强度翻倍成 2 FLOP/byte）。张量核空转，tok/s ≈ `HBM 带宽 / 权重字节`。这就是为什么 70B BF16 单卡无论 ALU 多快都只有 20–40 tok/s，也是为什么批处理是重回算力密度的唯一办法——批为 `B` 时，一次权重读取喂 `B` 个 token。
 
 | 阶段 | 瓶颈 | 手段 |
 | :--- | :--- | :--- |
@@ -63,7 +63,7 @@ decode 每步**每条序列只出一个 token**：同样的权重被完整重读
 
 两个实践后果：把长 prefill 混进解码批会卡住所有流式用户（队头阻塞 → chunked prefill）；10 万以上上下文时 prefill 不再是 MLP 受限而是注意力受限，FlashAttention 类 kernel 比 matmul 吞吐更重要。
 
-**速记**：prefill 是 GEMM、算力瓶颈；decode 每步只出一个 token、权重读一遍，2 FLOP/byte，纯显存带宽瓶颈；批处理是让 decode 重回算力密集的唯一手段。
+**速记**：prefill 是 GEMM、算力瓶颈；decode 每步只出一个 token、权重读一遍，BF16 下约 1 FLOP/byte，纯显存带宽瓶颈；批处理是让 decode 重回算力密集的唯一手段。
 
 ### 2. 什么是连续批处理（continuous / in-flight batching），为什么它取代了静态批处理？
 
@@ -96,7 +96,7 @@ decode 每步**每条序列只出一个 token**：同样的权重被完整重读
 <!-- EN: How does PagedAttention work, and what problem of KV-cache fragmentation does it solve? -->
 
 **Asked at**: NVIDIA · Together AI
-**Source**: https://outcomeschool.com/blog/paged-attention-in-llms · https://outcomeschool.com/blog/how-does-vllm-work
+**Source**: https://outcomeschool.com/blog/paged-attention-in-llms and https://outcomeschool.com/blog/how-does-vllm-work
 
 **参考答案**
 
@@ -183,7 +183,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 | 格式 | 字节/参数 | 收益 | 什么会坏 |
 | :--- | :--- | :--- | :--- |
 | FP16 | 2 | 基线 | 大模型训练时范围溢出（推理无此问题） |
-| BF16 | 2 | FP32 的量程、8 位尾数 | 推理上无可测损失，默认选择 |
+| BF16 | 2 | FP32 的量程、7 位显式尾数（加隐含位算 8 位） | 推理上无可测损失，默认选择 |
 | FP8 (E4M3) | 1 | Hopper/Blackwell 上约 1.8× 吞吐 | 激活离群值 >6σ；需 per-tensor 缩放，稳妥要 per-token/per-block |
 | INT8 (W8A8) | 1 | 老 GPU 上接近 FP8 | 不做 SmoothQuant 时激活离群值把精度打崩，小模型最先受害 |
 | INT4 权重-only (AWQ/GPTQ) | 0.5 | 小约 4×，对带宽受限的 decode 收益大 | 约 7B 以下退化，数学/代码/抄写先崩；反量化开销可能让大 batch 更慢 |
@@ -227,11 +227,11 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 <!-- EN: Estimate the GPU memory needed to serve a 70B model: weights, KV cache, activations, fragmentation. -->
 
 **Asked at**: NVIDIA · 字节跳动
-**Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/paged-attention-in-llms
+**Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/paged-attention-in-llms
 
 **参考答案**
 
-按 Llama-2-70B 的形状算（80 层、64 头、8 个 KV 头、head_dim 128）：
+按 Llama-3-70B 的形状算（80 层、64 个 Q 头、8 个 KV 头、head_dim 128、词表 128k）：
 
 | 组成 | 算式 | 结果 |
 | :--- | :--- | :--- |
@@ -245,7 +245,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 所以规划是：先放权重，再用 `KV 预算 /（每 token KV × 平均序列长）` 得并发数。8×H100（640 GB）+ BF16 权重：约 490 GB 给 KV → 大约 **180 条并发的 8k 序列**；权重和 KV 都用 FP8 则翻倍还不止。
 
-真正的坑是词表 logits 峰值：8k token 的 prefill 要物化 `[8192, 128k]` 的分数，单次分配约 2 GB，实际 OOM 的往往是它而不是稳态那笔账。第二个坑：每 token KV 随 **KV 头数**线性，所以 GQA（8 vs 64）直接换来 8× 并发——模型选型比任何服务端调优都更有决定权。
+真正的坑是词表 logits 峰值：8k token 的 prefill 要物化 `[8192, 128k]` 的分数，`8192 × 128k × 2 B ≈ 2.1 GB`，实际 OOM 的往往是它而不是稳态那笔账。第二个坑：每 token KV 随 **KV 头数**线性，所以 GQA（8 vs 64）直接换来 8× 并发——模型选型比任何服务端调优都更有决定权。
 
 **速记**：先算权重（BF16 140GB），再按 `每 token 320KB × 长度` 算 KV；真正 OOM 的往往是 prefill 的 vocab logits 瞬时分配，而 GQA 的 KV 头数直接决定并发上限。
 
@@ -254,7 +254,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 <!-- EN: What are TTFT, TPOT, ITL and throughput, and how do they trade against each other? -->
 
 **Asked at**: Microsoft · Apple · Perplexity
-**Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization · https://www.youtube.com/watch?v=XD8DD4cEHu0
+**Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization and https://www.youtube.com/watch?v=XD8DD4cEHu0
 
 **参考答案**
 
@@ -297,7 +297,7 @@ tok/s ≈ HBM bandwidth × efficiency / weight bytes
 
 H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 GB。
 
-`3.35e12 / 140e9 ≈ 24 tok/s` 理论值，按真实效率约 **19–20 tok/s**。算术强度 2 FLOP/byte，而拐点是 `989e12 / 3.35e12 ≈ 295` FLOP/byte——只用到约 0.7% 的峰值算力，张量核在这里无关。
+`3.35e12 / 140e9 ≈ 24 tok/s` 理论值，按真实效率约 **19–20 tok/s**。算术强度是 **1 FLOP/byte**（每参数 2 FLOP ÷ 2 B），拐点 `989e12 / 3.35e12 ≈ 295` FLOP/byte——只用到约 **0.34%**（1/295）的峰值算力，张量核在这里无关。要让 decode 变成算力受限，batch 得加到约 **295**（295 × 1 FLOP/byte ≈ 295 FLOP/byte），而那个 batch 的 KV 通常先撑爆显存。
 
 然后是物理问题：140 GB 装不进 80 GB，所以必须 TP=2，每卡持 70 GB、每 token 读 70 GB → roofline `3.35e12 / 70e9 ≈ 48 tok/s`，再减去两次每层 all-reduce。实测 Llama-2-70B 在 2×H100、batch 1 下大约 30–40 tok/s。
 
@@ -308,7 +308,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 | FP8 权重 | 约 2× tok/s |
 | INT4 权重 | 约 4×（直到反量化开销咬回来） |
 | batch 8 | 聚合约 7×，TPOT 略差 |
-| batch 147 | decode 到达拐点，算力成为限制 |
+| batch 约 295 | decode 到达拐点（算力强度追平 295 FLOP/byte），算力成为限制 |
 
 **速记**：batch=1 时 `tok/s ≈ 带宽 / 权重字节`，70B BF16 单卡理论 24、实际 20 左右，算力利用率不到 1%；70B 装不进 80GB，实际要 TP=2，roofline 约 48、实测 30~40。
 
@@ -317,7 +317,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 <!-- EN: When would you choose vLLM vs SGLang vs TensorRT-LLM vs a custom stack? -->
 
 **Asked at**: NVIDIA · Together AI · 腾讯 · 字节跳动
-**Source**: https://outcomeschool.com/blog/how-does-vllm-work · https://outcomeschool.com/blog/how-does-sglang-work · https://outcomeschool.com/blog/how-does-tensorrt-llm-work
+**Source**: https://outcomeschool.com/blog/how-does-vllm-work and https://outcomeschool.com/blog/how-does-sglang-work and https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
 **参考答案**
 
@@ -339,7 +339,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 <!-- EN: How would you cut LLM serving cost by 10x? Enumerate every lever and rank them. -->
 
 **Asked at**: Microsoft · Amazon（AWS） · NVIDIA · Cursor
-**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
+**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk and https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
 
@@ -357,9 +357,9 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 | 8 | 集群规模下的 PD 分离 | 1.2–1.4× | 只在 KV 传输够快时成立 |
 | 9 | 蒸馏到更小的模型 | 3–20× | 天花板最高，最慢也最险 |
 
-10 倍从来不是单一杠杆，而是 `1.6 × 1.5 × 1.4 × 1.3 × 1.2`。先做度量：把每千次请求的花费拆成**输入**与**输出** token、按路由、按租户。输出 token 单价是输入的 3–5 倍，一段啰嗦 JSON 或话痨 system prompt 是成本 bug，不是模型选择。
+10 倍从来不是单一杠杆，而是几个 1.5–1.8× 的杠杆相乘：`1.8（量化）× 1.6（硬件/投机）× 1.5（砍 token）× 1.5（缓存）× 1.5（利用率）≈ 9.7`。反过来，若每档只取 1.3–1.4×，`1.3 × 1.4 × 1.4 × 1.3 × 1.4 ≈ 4.6`——只有 5 倍上下，这就解释了为什么很多"降本 10 倍"的方案账面上根本不成立。先做度量：把每千次请求的花费拆成**输入**与**输出** token、按路由、按租户。输出 token 单价是输入的 3–5 倍，一段啰嗦 JSON 或话痨 system prompt 是成本 bug，不是模型选择。
 
-**速记**：先砍需求侧——删无用 token、前缀/语义缓存、小模型路由，再谈供给侧的批处理、FP8、投机解码、硬件；十倍永远是五个 1.3~1.6 相乘，且先按输入/输出 token 拆分账单。
+**速记**：先砍需求侧——删无用 token、前缀/语义缓存、小模型路由，再谈供给侧的批处理、FP8、投机解码、硬件；十倍要靠几个 1.5~1.8 的杠杆相乘（1.8×1.6×1.5×1.5×1.5≈9.7），每档只取 1.3~1.4 就只有 5 倍，且先按输入/输出 token 拆分账单。
 
 ### 13. 一次没有改动模型的发布之后，你的 p99 延迟翻倍了。讲讲你的排查过程。
 
@@ -500,6 +500,7 @@ loop:
 
 <!-- EN: You need to serve a Llama-class 70B+ model to hundreds of millions of assistant users. What does the serving stack look like and where does the money go? -->
 
+**Asked at**: Meta
 **Source**: https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
@@ -533,7 +534,8 @@ loop:
 
 <!-- EN: Estimate the KV-cache memory to serve a 70B-class model at 128k context. What do you do when it doesn't fit? -->
 
-**Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
+**Asked at**: xAI
+**Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
 
@@ -558,6 +560,8 @@ loop:
 ### 2. 为 LLM API 设计一个限流器，其中成本随 token 数而非请求数增长。
 
 <!-- EN: Design a rate limiter for an LLM API where cost scales with tokens, not requests. -->
+
+**Asked at**: xAI
 
 **参考答案**
 
@@ -589,7 +593,8 @@ b.tokens -= n; global_.tokens -= n
 
 <!-- EN: Estimate the KV-cache memory for serving Mistral 7B, and design the rolling-buffer cache that sliding-window attention enables. -->
 
-**Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/how-does-sliding-window-attention-work
+**Asked at**: Mistral AI
+**Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/how-does-sliding-window-attention-work
 
 **参考答案**
 
@@ -603,7 +608,7 @@ Mistral 7B：32 层、32 Q 头、8 KV 头、head_dim 128、bf16。
 | 32k | 4 GiB | 512 MiB（恒定） |
 | 128k | 16 GiB | 512 MiB（恒定） |
 
-L4/A10 级卡扣掉约 14 GB int4 权重后可用 24 GiB：朴素 cache 只能跑 1 条 128k 会话；环形 cache 能跑约 40 条，因为每条永远只驻留 4k 的缓存。
+L4/A10 级卡 24 GiB：int4 权重只有 `7B × 0.5 B ≈ 3.5–4 GB`，加上激活与 workspace 后剩约 **20 GiB** 给 KV。于是朴素 cache 只能跑 1 条 128k 会话（16 GiB ≤ 20 GiB）；环形 cache 能跑约 40 条（`20 GiB / 512 MiB ≈ 40`），因为每条永远只驻留 4k 的缓存。
 
 **设计**：每层每条序列一个固定环。
 
@@ -622,6 +627,7 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: You need to quantize a model for a customer's hardware. How do you choose a scheme, and how do you prove quality hasn't regressed? -->
 
+**Asked at**: Mistral AI
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
@@ -658,6 +664,7 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: Sketch how you would serve a 671B-parameter MoE model with low latency under GPU-memory constraints. -->
 
+**Asked at**: DeepSeek
 **Source**: https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
@@ -690,6 +697,7 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: Walk me through why you would disaggregate prefill and decode onto separate machines, as Mooncake does. What does that buy you and what does it cost? -->
 
+**Asked at**: Moonshot AI
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
 
 **参考答案**
@@ -709,18 +717,19 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **代价**：
 
-- **KV 传输**。10 万 token 上下文每请求数百 MB，走 RDMA 要几十毫秒，可能超过它换来的 decode 时间。长上下文把传输变成新瓶颈——所以要按层流式传输、与计算重叠。
+- **KV 传输**。10 万 token 的 KV 远不止"数百 MB"：按 DeepSeek 式的 MLA 口径（约 70 KB/token）是 `10^5 × 70 KB ≈ 7 GB`，按 70B-GQA 的 320 KiB/token 则是 **32 GB**。50 GB/s 的 RDMA 下分别要 **约 140 ms 和约 640 ms**——比它换来的那段 decode 时间更容易超标，而且这是每请求一次、同时占用 P/D 两侧带宽的固定开销。长上下文把传输变成新瓶颈——所以要按层流式传输、与计算重叠，并且只让"prefill 时间明显大于传输时间"的请求走分离路径。
 - **多一跳**关键路径，以及一个必须跟踪缓存局部性的全局调度器，否则 token 被送到需要重新拉取的节点。
 - **故障面**：两个池、两个故障域，权重更新时还有缓存一致性。
 
 **什么时候别做**：短 prompt、低并发、单机部署——传输与调度开销占主导，你会比同居一机的引擎更慢。
 
-**速记**：prefill 算力密集、decode 带宽密集，混批互相拖累；分离后可独立扩缩、消除队头阻塞、做全局 KV 池前缀复用；代价是 KV 传输（长上下文几百 MB）、多一跳与全局调度复杂度。短 prompt 低并发纯亏。
+**速记**：prefill 算力密集、decode 带宽密集，混批互相拖累；分离后可独立扩缩、消除队头阻塞、做全局 KV 池前缀复用；代价是 KV 传输（10 万 token 约 7~32 GB）、多一跳与全局调度复杂度。短 prompt 低并发纯亏。
 
 ### 2. 一个聊天助手每一轮都会重发很长的对话历史。你如何避免重复计算全部内容，其中有哪些坑？
 
 <!-- EN: A chat assistant re-sends a long conversation history on every turn. How do you avoid recomputing all of it, and what are the pitfalls? -->
 
+**Asked at**: Moonshot AI
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
 **参考答案**
@@ -759,7 +768,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: How do you deploy a capable assistant on cost-sensitive or on-device hardware without a datacentre GPU? Walk through the efficiency toolkit. -->
 
-**Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
+**Asked at**: Sarvam AI
+**Source**: https://outcomeschool.com/blog/how-does-model-quantization-work and https://outcomeschool.com/blog/small-language-models-slms
 
 **参考答案**
 
@@ -793,7 +803,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: A Copilot chat feature has a p95 budget of 3 seconds to first useful content. Where does the time go, and how do you cut it? -->
 
-**Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0 · https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
+**Asked at**: Microsoft
+**Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0 and https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
 
 **参考答案**
 
@@ -822,7 +833,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: Estimate the annual serving cost of adding an LLM summary feature for 100 million weekly active users, and how you'd cut it by 10x. -->
 
-**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
+**Asked at**: Microsoft
+**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk and https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
 
@@ -861,7 +873,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: A customer's Bedrock-hosted workload costs too much. Cut inference cost dramatically without unacceptable quality loss. -->
 
-**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
+**Asked at**: Amazon（AWS）
+**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk and https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
 
@@ -899,7 +912,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: You need to run a ~3B-parameter language model on a phone with tight memory and power budgets. What changes versus serving the same model in a datacenter? -->
 
-**Source**: https://outcomeschool.com/blog/cloud-vs-on-device-model-deployment · https://outcomeschool.com/blog/how-does-model-quantization-work
+**Asked at**: Apple
+**Source**: https://outcomeschool.com/blog/cloud-vs-on-device-model-deployment and https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
 
@@ -929,6 +943,7 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: Explain post-training quantization versus quantization-aware training. What breaks when you push weights to 2–4 bits, and how do you recover quality? -->
 
+**Asked at**: Apple
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
@@ -955,7 +970,8 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 <!-- EN: Estimate the KV-cache memory for a 3B on-device model at 4k context, and name the levers that shrink it. -->
 
-**Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
+**Asked at**: Apple
+**Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
 
@@ -991,6 +1007,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: Time-to-first-token for your on-device feature is 1.8 s. Walk me through diagnosing and fixing it. -->
 
+**Asked at**: Apple
 **Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0
 
 **参考答案**
@@ -1002,7 +1019,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 | App/UI + 首次冷启动路径 | 100–600 ms | 会话建立、守护进程启动 |
 | **模型加载 / 权重换页** | 0–900 ms（双峰！） | 从 flash mmap 换入、ANE 编译，仅首次 |
 | 分词 + prompt 组装 | 20–80 ms | 长系统提示词、聊天历史重新序列化 |
-| **Prefill** | 300–900 ms | 算力受限，∝ prompt 长度，在手机 NPU 上每 token 成本是解码的 10–50 倍 |
+| **Prefill** | 300–900 ms | 算力受限，∝ prompt 长度；900 token 摊到 600 ms 是约 0.7 ms/token，而解码每 token 要读约 1.5 GB 的 int4 权重（3B × 0.5 B），30 GB/s 下约 50 ms——**解码每 token 比 prefill 贵 50–150 倍** |
 | 采样 + 首个 detokenize | 10–40 ms | |
 | 渲染 / 流式界面挂载 | 50–200 ms | 首 token 已存在但屏幕上是空的 |
 
@@ -1026,7 +1043,8 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: You want to serve a 70B-parameter model on a single 80 GB GPU. Walk me through whether it fits and what single-stream tokens/sec you'd expect. -->
 
-**Source**: https://outcomeschool.com/blog/how-does-model-quantization-work · https://outcomeschool.com/blog/kv-cache-in-llms
+**Asked at**: NVIDIA
+**Source**: https://outcomeschool.com/blog/how-does-model-quantization-work and https://outcomeschool.com/blog/kv-cache-in-llms
 
 **参考答案**
 
@@ -1039,13 +1057,13 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 | FP8/INT8 | 70 GB | 能装，剩 ~8 GB，几乎没 KV 空间 |
 | INT4（AWQ/GPTQ） | ~35–38 GB | 舒服地装下，~40 GB 留给 KV 与 workspace |
 
-**第 2 步——KV cache**：每 token `2 × 层数 × kv_heads × head_dim × 字节`。按 Llama-3-70B 形状（80 层、8 个 KV 头、head_dim 128、FP16）约 327 KB/token → 40 GB ≈ **12 万缓存 token**。注意是 GQA 让这个数字能活得下来；用 MHA 会再大 10 倍。
+**第 2 步——KV cache**：每 token `2 × 层数 × kv_heads × head_dim × 字节`。按 Llama-3-70B 形状（80 层、8 个 KV 头、head_dim 128、FP16）是 `2 × 80 × 8 × 128 × 2 = 327,680 B` ≈ 320 KiB/token → 40 GB ≈ **12 万缓存 token**（`40 GiB / 320 KiB ≈ 131,000`）。注意是 GQA 让这个数字活得下来；换成 64 个 KV 头的 MHA 会大 **8 倍**（`64 / 8`，即 2.5 MiB/token），同样 40 GB 只够约 1.6 万 token（`40 GiB / 2.5 MiB ≈ 16,000`）。
 
 **第 3 步——解码速度**：单流是带宽受限：`tok/s ≈ BW / 每步读取字节数`。
 
 - H100 SXM、约 3.35 TB/s、INT4 权重 → 每步读 35 GB → **理论 ~95 tok/s**；实际带宽利用率 50–60% 时是 **40–60 tok/s**。
-- INT8 → 每步 ~70 GB → 实际 ~25–35 tok/s。
-- FP16 根本装不下；切分后大约 ~45 tok/s，还要减掉跨 GPU 同步。
+- INT8 → 每步 ~70 GB → `3.35e12 / 70e9 ≈ 48`，实际 50–60% 带宽下 **~24–29 tok/s**。
+- FP16 根本装不下；TP=2 后每卡持 70 GB、每步读 70 GB → roofline 同样约 48 tok/s，按 50–60% 是 **24–29 tok/s**，还要再减掉每层两次 all-reduce。
 
 **第 4 步——什么会打翻它**：上下文长度（KV 线性增长）、batch > 1（权重被摊薄，但 KV 与激活内存开始咬人）、以及长 prefill（算力受限，是另一套数学——prefill 才是 GPU 真正忙起来的地方）。
 
@@ -1055,6 +1073,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: What does TensorRT / TensorRT-LLM actually do to a model to make it faster, and when will it not help? -->
 
+**Asked at**: NVIDIA
 **Source**: https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
 **参考答案**
@@ -1080,6 +1099,8 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 ### 3. 为服务一个 405B 参数的稠密模型设计并行策略。TP、PP、EP 各自放在哪里、为什么？
 
 <!-- EN: Design the parallelism strategy for serving a 405B-parameter dense model. TP, PP, EP: what goes where and why? -->
+
+**Asked at**: NVIDIA
 
 **参考答案**
 
@@ -1109,6 +1130,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: The onboard compute budget is fixed. Walk me through quantizing and pruning a vision model without losing recall on small objects. -->
 
+**Asked at**: Tesla
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
@@ -1144,9 +1166,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 权重是固定的，KV cache 随 batch × 上下文增长，所以占比完全取决于你对流量的假设。
 
-权重：8 × 7B ≈ 56B 参数，fp16 下约 **112 GB**，再加 1~2 GB 的缓冲区。8×80GB = 640 GB 的机器上，剩约 520 GB 给其他所有东西。
+权重：Mixtral 8x7B 的名字会误导——8 个专家共用同一套注意力与嵌入，总参数不是 8 × 7B = 56B，而是 **46.7B**；fp16 下 `46.7e9 × 2 B ≈ 93 GB`，再加 1~2 GB 的缓冲区。8×80 GB = 640 GB 的机器上，剩约 545 GB 给其他所有东西。
 
-每 token 的 KV：`2 · L · n_kv · d_head · bytes`。以 Mixtral 风格的 7B 专家（32 层、32 头、`d_head=128`、fp16、无 GQA）计算约 **512 KB/token**；8k 上下文就是每条序列约 4 GB，于是约 120 条并发的 8k 序列就能把剩余显存吃满。
+每 token 的 KV：`2 · L · n_kv · d_head · bytes`。Mixtral 是 32 层、32 个 Q 头、**8 个 KV 头（GQA）**、`d_head=128`、fp16，所以 `2 × 32 × 8 × 128 × 2 = 131,072 B = 128 KiB/token`；8k 上下文就是每条序列约 1 GiB（`128 KiB × 8192`），于是约 **500 条**并发的 8k 序列才会把剩余显存吃满（`545 GiB / 1 GiB ≈ 545`）。作为对照：若是不带 GQA 的 32 个 KV 头变体，就是 4 × 128 KiB = 512 KiB/token、8k 每条 4 GiB、只够约 136 条——同样显存差 4 倍并发。
 
 其他占用，通常被忽略：
 
@@ -1158,9 +1180,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 | 专家权重副本 | 取决于模型 | EP/TP 决定复制几份 |
 | 前缀缓存池 | 可配置 | 共享、可驱逐，与 KV 争空间 |
 
-结论性的一句话：MoE 模型上**权重主导**，KV 只是小项；长上下文的稠密服务里比例反过来，KV 成为硬约束。
+结论性的一句话：MoE 上**权重是固定的大头**（46.7B 全都要驻留，而每 token 只激活约 12.9B，因此"参数多但每 token 读得少"是它的全部意义）；KV 则随并发线性涨——8k 上下文几十条并发时还只是小项，几百条并发时就到与权重同一量级，长上下文的稠密服务里比例则完全反过来，KV 成为硬约束。
 
-**速记**：56B 权重 fp16 约 112GB，KV 每 token 约 512KB（8k 上下文≈4GB/条）；还有激活、CUDA graph、碎片和前缀缓存池。MoE 是权重主导，长上下文稠密服务则反过来。
+**速记**：46.7B 权重 fp16 约 93GB，KV 每 token 约 128KB（GQA；8k 上下文≈1GiB/条，可跑约 500 条）；还有激活、CUDA graph、碎片和前缀缓存池。MoE 的权重是大头，长上下文稠密服务则反过来。
 
 ### 2. 前缀缓存命中了，但 KV block 已被下放到 SSD。取回路径是怎样的，回传到 GPU 的过程中是否必须经过主机内存？
 
@@ -1180,7 +1202,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 | GPUDirect Storage | NVMe 直接写入 GPU HBM，跳过中转缓冲 | 需要支持的 NIC/PCIe 拓扑与驱动 |
 | 无 GDS 的优化 | 大块 pinned 暂存 + `cudaMemcpyAsync` 重叠拷贝 | 默认做法 |
 
-决定"这次命中值不值"的成本模型：单块 NVMe 约 3~7 GB/s，10 万 token 前缀的 KV 约 50 MB，I/O 约 10 ms；但 H2D 拷贝和块表重映射还要叠加延迟。同一前缀的第二次命中便宜得多，因为页缓存已经持有数据——所以**第二次命中才是好命中**。
+决定"这次命中值不值"的成本模型：单块 NVMe 约 3~7 GB/s。10 万 token 前缀的 KV 按本卷 70B-GQA 的 320 KiB/token 是 `10^5 × 320 KiB ≈ 32 GB`（30.5 GiB），从 SSD 读回 `32 GB / 5 GB/s ≈ 6.5 s`（3~7 GB/s 区间即约 5~11 s）；即便换成 7B 级 GQA（128 KiB/token）也有 12.8 GB、约 2.6 s。所以这不是毫秒级的事：它只有在"重算这段 prefill 更贵"时才值——10 万 token 的 prefill 在单卡上通常是几十秒量级，取回仍便宜约一个数量级，但必须与 prefill 流式重叠，且只值得为会被反复命中的前缀做。H2D 拷贝（32 GB 走 PCIe 也要约 1 s）和块表重映射还要再叠加。同一前缀的第二次命中便宜得多，因为页缓存已经持有数据——所以**第二次命中才是好命中**。
 
 要指出的失败模式：若请求在等待取回时发生驱逐，两个请求会把同一批块来回抖动。必须给离载块加引用计数，并定死"绝不驱逐正在传输的块"，否则会出现看起来像随机延迟毛刺的重算风暴。
 
@@ -1191,7 +1213,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 <!-- EN: What do PagedAttention and continuous batching each solve in vLLM? -->
 
 **Asked at**: 字节跳动
-**Source**: https://outcomeschool.com/blog/how-does-vllm-work
+**Source**: https://outcomeschool.com/blog/how-does-vllm-work and https://outcomeschool.com/blog/continuous-batching-in-llms
 
 **参考答案**
 
@@ -1259,7 +1281,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 - **TTFT 与 TPOT 的 SLO 互相冲突**，且你在服务长输入短输出（大 system prompt 的对话、RAG）。
 - 利用率偏低，因为 prefill 突发不频繁但很猛。
-- 能承担 KV 传输：1 万 token 前缀是数十 MB，走 RDMA 是个位数毫秒。
+- 能承担 KV 传输：1 万 token 前缀在 70B-GQA 上是 `10^4 × 320 KiB ≈ 3.2 GB`，50 GB/s 的 RDMA ≈ **65 ms**；7B 级的 128 KiB/token 也要 1.3 GB ≈ 26 ms。这与跨公司通用 15 的「8k 提示 → 2.6 GB、400G IB 约 50 ms」是同一口径——传输是几十毫秒，不是个位数毫秒，所以只有在它比省下的 prefill 时间小一个量级、且能与计算流式重叠时才划算。
 
 不值得的情况：集群太小（失去灵活性、传输成本吃掉收益），或 prompt 短到 prefill 根本不是可见停顿。厂商宣称 2 倍吞吐的基准通常假设长 prompt + 严格 TPOT，那是最佳情形。
 
@@ -1275,7 +1297,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 <!-- EN: What is the core idea behind vLLM? What do PagedAttention and continuous batching each solve? -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/how-does-vllm-work
+**Source**: https://outcomeschool.com/blog/how-does-vllm-work and https://outcomeschool.com/blog/paged-attention-in-llms
 
 **参考答案**
 
@@ -1324,7 +1346,6 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 <!-- EN: How do you quality-check training data before it goes into a run? -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/llm-evaluation
 
 **参考答案**
 
@@ -1411,6 +1432,7 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 <!-- EN: Which inference optimisation tools have you used (TensorRT, vLLM)? How do they work and what was the experience? -->
 
+**Asked at**: 京东
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work and https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
 **参考答案**
@@ -1436,6 +1458,8 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 <!-- EN: How do you handle hundreds of millions of records: cleaning, preprocessing, efficient loading, and the traps you hit? -->
 
+**Asked at**: 京东
+
 **参考答案**
 
 当成数据管线问题，不是建模问题。
@@ -1456,6 +1480,8 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 ### 3. 一个模型在生产环境中表现退化，质量变差或延迟升高。讲讲完整的诊断过程。
 
 <!-- EN: A model degrades in production, worse quality or higher latency. Walk me through the full diagnosis. -->
+
+**Asked at**: 京东
 
 **参考答案**
 
@@ -1490,6 +1516,7 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 <!-- EN: What is the difference between bf16 and fp16, how many bits is each, and how do you choose precision in training? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
@@ -1518,6 +1545,7 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 <!-- EN: What memory optimisation strategies exist for attention computation? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/paged-attention-in-llms
 
 **参考答案**
@@ -1552,6 +1580,8 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 <!-- EN: What is the core difference between ZeRO-2 and ZeRO-3 in distributed training? -->
 
+**Asked at**: 美团
+
 **参考答案**
 
 ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上。
@@ -1577,6 +1607,7 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: Why do LLMs stream token by token, and what protocol is underneath? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/how-does-token-streaming-work
 
 **参考答案**
@@ -1609,11 +1640,12 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: An LPU has no HBM at all, just on-die SRAM. Redo the decode roofline argument for that machine and tell me what changes. -->
 
+**Asked at**: Groq
 **Source**: https://outcomeschool.com/blog/how-does-an-lpu-work
 
 **参考答案**
 
-结论：GPU 上 batch=1 的 decode 算术强度约 2 FLOP/byte，远低于拐点，所以每 token 时间 ≈ `权重字节 / HBM 带宽`；把 HBM 拿掉，整个论证的形状都变了——**约束从带宽换成容量**。
+结论：GPU 上 batch=1 的 decode 算术强度只有约 2 FLOP/byte（8-bit 权重口径；bf16 是 1 FLOP/byte），远低于拐点，所以每 token 时间 ≈ `权重字节 / HBM 带宽`；把 HBM 拿掉，整个论证的形状都变了——**约束从带宽换成容量**。
 
 | 项 | GPU | 纯 SRAM |
 | :--- | :--- | :--- |
@@ -1634,6 +1666,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: A 70B dense model at 8-bit weights, chips with ~230 MB of SRAM each. Walk me through the deployment and the unit economics. -->
 
+**Asked at**: Groq
+**Source**: https://outcomeschool.com/blog/how-does-an-lpu-work
+
 **参考答案**
 
 结论：先算容量，再算吞吐，最后一定要用"卡数 × 卡时"而不是 $/token 来算账。
@@ -1653,6 +1688,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 ### 3. 在 GPU 上你通过批处理来摊薄权重读取。在纯 SRAM 机器上，批处理的账该怎么算，这又应如何改变我们的定价方式？
 
 <!-- EN: On a GPU you batch to amortise weight reads. What is the batching calculus on an SRAM-only machine, and how should that change how we price? -->
+
+**Asked at**: Groq
+**Source**: https://outcomeschool.com/blog/how-does-an-lpu-work
 
 **参考答案**
 
@@ -1679,6 +1717,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: Determinism is the headline claim. What does it actually buy at p99, and why does it matter especially for agentic workloads? -->
 
+**Asked at**: Groq
+**Source**: https://outcomeschool.com/blog/how-does-an-lpu-work
+
 **参考答案**
 
 结论：确定性把 p99 从"随负载涌现的统计量"变成"编译期算出来的常数"。
@@ -1700,6 +1741,8 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 ### 5. 当专家选择依赖数据时，你如何在静态调度的互联结构上服务一个大型 MoE 模型？
 
 <!-- EN: How would you serve a large mixture-of-experts model on a statically scheduled fabric when expert selection is data-dependent? -->
+
+**Asked at**: Groq
 
 **参考答案**
 
@@ -1730,7 +1773,8 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: Design the scheduler for a continuous-batching inference engine. -->
 
-**Source**: https://outcomeschool.com/blog/continuous-batching-in-llms · https://outcomeschool.com/blog/how-does-vllm-work
+**Asked at**: Together AI
+**Source**: https://outcomeschool.com/blog/continuous-batching-in-llms and https://outcomeschool.com/blog/how-does-vllm-work
 
 **参考答案**
 
@@ -1760,7 +1804,8 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 <!-- EN: Explain speculative decoding. When does it help, when does it hurt, and why adapt the speculator to live traffic? -->
 
-**Source**: https://outcomeschool.com/blog/speculative-decoding · https://outcomeschool.com/blog/n-gram-speculation-in-llms
+**Asked at**: Together AI
+**Source**: https://outcomeschool.com/blog/speculative-decoding and https://outcomeschool.com/blog/n-gram-speculation-in-llms
 
 **参考答案**
 
@@ -1786,6 +1831,8 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 ### 3. 为一个专属 endpoint 定价：估算 70B 模型每百万输出 token 的成本，并解释吞吐与延迟之间的权衡。
 
 <!-- EN: Price a dedicated endpoint: estimate cost per million output tokens for a 70B model, and explain the throughput-latency trade. -->
+
+**Asked at**: Together AI
 
 **参考答案**
 
@@ -1819,11 +1866,12 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: p95 time-to-first-token regressed from 1.2 s to 3 s after a release. Walk me through finding and fixing it. -->
 
+**Asked at**: Perplexity
 **Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0
 
 **参考答案**
 
-结论：先确认它是真的。p50 持平而 p95 涨到 3 倍，是**排队**的特征，不是算力的特征。先查客户端指标是否包含重试，以及负载构成有没有变（更长的提示、更多并发）。
+结论：先确认它是真的。p50 持平而 p95 从 1.2 s 涨到 3 s（**2.5 倍**），是**排队**的特征，不是算力的特征。先查客户端指标是否包含重试，以及负载构成有没有变（更长的提示、更多并发）。
 
 **第一步：拆 TTFT。** 永远不要 debug "TTFT"，要 debug 它的组成部分：
 
@@ -1840,11 +1888,11 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 | 首个 decode 步 | 丢了 CUDA graph 捕获、投机解码被关、量化 kernel 换了 |
 | 路由 | 某个开关或新模型版本把流量导到了更冷的池子 |
 
-**第二步：把这次发布与上一个好版本做 diff。** 依赖、模型权重版本锁定、分词器、模板、检索配置、`max_tokens`、批处理/调度参数。实践中最常见的真因是**提示变长了**（检索多塞了上下文），而 prefill 随长度近似二次增长，token +40% ≈ prefill +90%。
+**第二步：把这次发布与上一个好版本做 diff。** 依赖、模型权重版本锁定、分词器、模板、检索配置、`max_tokens`、批处理/调度参数。实践中最常见的真因是**提示变长了**（检索多塞了上下文）。prefill 的 FLOPs 是 `2NT`（线性项，N=70B）+ `4LdT²`（注意力项）：8k prompt 时线性项 `2 × 70e9 × 8192 ≈ 1.15e15`、注意力项 `4 × 80 × 8192 × 8192² ≈ 1.8e14`，注意力只占约 13%，所以这一区间 prefill 近似**线性**——token +40% → 总 FLOPs 约 +47%（`1.15e15 × 1.4 + 0.18e15 × 1.96 ≈ 1.95e15`，对基线 `1.33e15`），而不是 +90%。注意力项要到 5 万 token 以上才占主导，那时才接近二次。
 
 **第三步：用回放做二分。** 抓 1000 条周二的真实请求，用开关开/关跑新构建。确认到具体段之后修复，并把**按段的 SLO** 加到看板上，让下一次回归自己指认自己。
 
-**速记**：先看 p50/p95 形状——p50 平而 p95 涨三倍是排队问题不是算力问题。把 TTFT 拆成"排队 + 路由 + 检索 + prefill + 首 decode"逐段打点；最常见真因是 prompt 变长（检索 top-k 或模板改动）和前缀缓存 key 变化导致 miss。
+**速记**：先看 p50/p95 形状——p50 平而 p95 从 1.2s 涨到 3s（2.5 倍）是排队问题不是算力问题。把 TTFT 拆成"排队 + 路由 + 检索 + prefill + 首 decode"逐段打点；最常见真因是 prompt 变长（检索 top-k 或模板改动）和前缀缓存 key 变化导致 miss。
 
 
 ---
@@ -1855,7 +1903,8 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: Serving a custom completion model to millions of DAU: walk me through the inference-cost model and your top three levers. -->
 
-**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/how-does-cursor-work
+**Asked at**: Cursor
+**Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk and https://outcomeschool.com/blog/how-does-cursor-work
 
 **参考答案**
 
@@ -1886,7 +1935,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: Walk me through the latency budget of a query: query understanding → retrieval → rerank → LLM answer. Where do you spend and where do you cut? -->
 
-**Source**: https://outcomeschool.com/blog/rag-evaluation
+**Asked at**: Glean
 
 **参考答案**
 
@@ -1918,6 +1967,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: Our serving cost is dominated by KV cache, not weights. Get it down by an order of magnitude and tell me what you give up. -->
 
+**Asked at**: Character.AI
 **Source**: https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
@@ -1943,6 +1993,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: Dialogues here average around 180 messages. Design the cache that sits between turns. -->
 
+**Asked at**: Character.AI
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
 **参考答案**
@@ -1968,6 +2019,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: You train natively in int8 rather than doing post-training quantization. Defend that. -->
 
+**Asked at**: Character.AI
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
 **参考答案**
@@ -1996,7 +2048,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 <!-- EN: Estimate what one message costs us to serve, and tell me which lever moves it most. -->
 
-**Source**: https://outcomeschool.com/blog/kv-cache-compression
+**Asked at**: Character.AI
 
 **参考答案**
 
@@ -2012,7 +2064,7 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 | prefill 工作量 | 7,000 token/轮（除非命中缓存） |
 | decode 工作量 | 120 token/轮 |
 
-自建服务下，单条成本 ≈ `(prefill_tokens × t_prefill + output_tokens × t_decode) / tokens_per_GPU_second × GPU_hour_price`。有意义的比例是：**7,000 token 的 prefill 约为 120 token 回复的 58 倍 token 量**，且高 batch 下 prefill 是算力受限、decode 是显存带宽受限。所以支出的形状大致是：prefill 在总量上占主导（除非缓存），decode 主导延迟。
+自建服务下，单条成本 ≈ `(prefill_tokens / prefill_tps + output_tokens / decode_tps) × price_per_GPU_second`（等价于 `(prefill_tok × t_prefill + out_tok × t_decode) × price_per_GPU_second`，两个 `t` 都是秒/token；注意别把去掉的 `tokens_per_GPU_second` 留在分母里，那样量纲不闭合）。单卡 70B 的一个具体口径：prefill 约 1 万 token/s、decode 约 40 token/s、$2/GPU-小时（≈$5.6e-4/秒），7,000 token prefill ≈ 0.7 s、120 token decode ≈ 3 s，一条消息 ≈ `3.7 s × $5.6e-4 ≈ $0.002`。有意义的比例是：**7,000 token 的 prefill 约为 120 token 回复的 58 倍 token 量**，且高 batch 下 prefill 是算力受限、decode 是显存带宽受限。所以支出的形状大致是：prefill 在总量上占主导（除非缓存），decode 主导延迟。
 
 最能撬动它的手段，按序：
 
@@ -2034,6 +2086,8 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 ### 1. 服务实时 TTS 与服务文本 LLM 是不同的容量问题。为什么，以及你如何做容量规划？
 
 <!-- EN: Serving real-time TTS is a different capacity problem from serving a text LLM. Why, and how do you plan capacity? -->
+
+**Asked at**: ElevenLabs
 
 **参考答案**
 
@@ -2067,6 +2121,8 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 ### 1. 病历记录应该在临床医生离开诊室之前就准备好。帮我做延迟预算，并告诉我钱花在哪里。
 
 <!-- EN: The note should be ready before the clinician leaves the room. Build me the latency budget, and tell me where the money goes. -->
+
+**Asked at**: Abridge
 
 **参考答案**
 
@@ -2104,6 +2160,8 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 ### 1. 一位同事想把语义层搬到云上，以便使用大得多的模型。讲讲这个方案的延迟预算。
 
 <!-- EN: A colleague wants to move the semantic layer to the cloud so you can use a much bigger model. Walk me through the latency budget. -->
+
+**Asked at**: Figure AI
 
 **参考答案**
 
@@ -2148,6 +2206,8 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 ### 1. 为车载技术栈做算力和延迟预算。当模型变大时，哪里会先撑不住？
 
 <!-- EN: Budget the compute and latency for the onboard stack. What breaks when a model gets bigger? -->
+
+**Asked at**: Waymo
 
 **参考答案**
 

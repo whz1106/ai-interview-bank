@@ -4,7 +4,7 @@
 
 > 考底层原理：attention 变体、位置编码、MoE 路由、并行与显存。
 
-> 题目为**英文原文**（源仓库 Apache-2.0），**答案为中文整理**。每条附 `Source` 时给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
+> 题干与答案均为中文；英文原题保存在每题的 `<!-- EN: -->` 注释里（渲染时不可见），可与源仓库逐字核对。有 `Source` 的题给出原始出处。授权与归属见 [NOTICE.md](NOTICE.md)。
 
 ## 目录
 
@@ -39,7 +39,7 @@
 
 <!-- EN: Explain scaled dot-product attention and why the 1/sqrt(d_k) scaling factor matters. -->
 
-**Source**: https://outcomeschool.com/blog/scaling-dot-product-attention · https://outcomeschool.com/blog/math-behind-attention-qkv
+**Source**: https://outcomeschool.com/blog/scaling-dot-product-attention and https://outcomeschool.com/blog/math-behind-attention-qkv
 
 **参考答案**
 
@@ -49,7 +49,7 @@ $$\text{Attn}(Q,K,V)=\text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
 
 对独立、近似单位方差的 $q,k\in\mathbb{R}^{d_k}$，点积的方差是 $d_k$，标准差随 $\sqrt{d_k}$ 增长。$d_k=128$ 时 logit 的 σ≈11。这么宽的分布上做 softmax 实际等于 one-hot：最大的 logit 以巨大优势胜出。
 
-| | 不缩放 | 除以 $1/\sqrt{d_k}$ |
+| | 不缩放 | 除以 $\sqrt{d_k}$ |
 | :--- | :--- | :--- |
 | logit 的 σ | $\sqrt{d_k}$ | 1 |
 | softmax 熵 | 接近 0 | 可用区间 |
@@ -67,7 +67,7 @@ $$\text{Attn}(Q,K,V)=\text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
 <!-- EN: What is the KV cache, and what are its memory implications at scale? Derive the formula. -->
 
 **Asked at**: OpenAI · xAI · Mistral AI · Amazon（AWS） · Apple · NVIDIA · Together AI · Character.AI · 字节跳动 · 腾讯 · 美团 · 阿里巴巴（淘天 / 阿里云）
-**Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
+**Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
 
@@ -84,7 +84,7 @@ $$\text{bytes}=2\cdot L\cdot H_{kv}\cdot d_{head}\cdot T\cdot B\cdot b$$
 | 与 $T\times B$ 线性 | 上下文一长，并发就塌 |
 | 与权重分开算 | 权重装得下、KV 装不下——这才是常见 OOM 原因 |
 | 每个 decode 步都得读 | decode 变成 HBM 带宽受限，而非 FLOP 受限 |
-| 分配粒度 | 按请求预留连续 buffer 会因碎片浪费 20–40% → PagedAttention |
+| 分配粒度 | 按请求预留 `max_length` 的连续 buffer：vLLM 实测只有 20.4–38.2% 的 KV 显存真正存了 token 状态，即 **60–80% 被浪费**（内部碎片 + 过度预留）→ PagedAttention |
 
 可用的杠杆：GQA/MLA 砍 $H_{kv}$ 或每 token 宽度；KV 量化（fp8 大约减半，约 4-bit 以下开始有明显质量损失）；共享 system prompt 用前缀缓存；长对话用驱逐/压缩。
 
@@ -107,7 +107,7 @@ $$\text{bytes}=2\cdot L\cdot H_{kv}\cdot d_{head}\cdot T\cdot B\cdot b$$
 | GQA | $G$，$1<G<H$ | $\times G/H$ | ≈MHA | 接近 MQA |
 | MQA | 1 | $\times 1/H$ | 退化 | 最快 |
 
-交换是显式的：**你在删掉 key/value 子空间的多样性**。MQA 让所有头共用一份 K/V，头之间只能在 query 上有差异，训练也更不稳——常需要更长训练或更谨慎的初始化来补回质量。GQA 是工业界最终选的插值：通常 8 个 KV 头对 32–64 个 query 头，即 8 倍缓存削减而分数保持 MHA 水平。
+交换是显式的：**你在删掉 key/value 子空间的多样性**。MQA 让所有头共用一份 K/V，头之间只能在 query 上有差异，训练也更不稳——常需要更长训练或更谨慎的初始化来补回质量。GQA 是工业界最终选的插值：通常 8 个 KV 头对 32–64 个 query 头，削减倍数就是每组的 q 头数 $H/G$——32/8 是 **4×**，64/8 才是 **8×**，而分数保持 MHA 水平。
 
 两个实践要点：
 
@@ -156,10 +156,12 @@ MLA 把**缓存大小**与**头数**解耦。它不缓存 K 和 V，而是每个
 
 FlashAttention 把 Q 切成能进 SRAM（约 100–200 KB）的块，流式读入 K/V 块，并维护**运行最大值 $m$ 与运行和 $\ell$**——online softmax——边走边对累加器重标定。那个 $N^2$ 矩阵从头到尾不存在。反向传播时用缓存的统计量重算分块，而不是把它存下来。
 
+省的是**落地**，不是总流量：论文 Table 1 给出的 HBM 访问量是 $\Theta(N^2d^2/M)$（$M$ 为 SRAM 能放的元素数），代入 $d=128$、$M\approx50\text{K}$ 是 $128^2/50000\approx0.33\,N^2$——**仍是二次**，只是常数比物化版本的几趟 $N^2$ 读写小一个量级。真正降到 $O(N)$ 的是**激活显存**。
+
 | | 朴素 | FlashAttention |
 | :--- | :--- | :--- |
 | FLOPs | 相同 | 相同 |
-| HBM 流量 | $O(N^2)$ 写+读 | $O(N)$ |
+| HBM 流量 | $O(N^2)$ 写+读（多趟） | $\Theta(N^2d^2/M)$，仍二次，只是常数小 |
 | 激活显存 | $O(N^2)$ | $O(N)$ |
 | 结果 | 精确 | 精确 |
 
@@ -174,7 +176,7 @@ FlashAttention 把 Q 切成能进 SRAM（约 100–200 KB）的块，流式读�
 <!-- EN: How does Byte Pair Encoding work, and what are its failure modes (numbers, code, non-Latin scripts)? -->
 
 **Asked at**: 阿里巴巴 · Sarvam AI · Hugging Face
-**Source**: https://outcomeschool.com/blog/bpe-in-llms · https://www.youtube.com/watch?v=sK2s9I84EVI
+**Source**: https://outcomeschool.com/blog/bpe-in-llms and https://www.youtube.com/watch?v=sK2s9I84EVI
 
 **参考答案**
 
@@ -204,7 +206,7 @@ BPE 是把贪心压缩算法变成分词器：
 
 <!-- EN: What is positional encoding in transformers, and how has it evolved (sinusoidal → learned → RoPE → ALiBi)? -->
 
-**Source**: https://outcomeschool.substack.com/p/positional-embeddings-in-llms · https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
+**Source**: https://outcomeschool.substack.com/p/positional-embeddings-in-llms and https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
 
@@ -301,7 +303,7 @@ $$y=\sum_{i\in\text{top-}k} g_i\,E_i(x),\qquad g=\text{softmax}(\text{top-}k(W_r
 <!-- EN: Explain the difference between pre-training, supervised fine-tuning and preference optimisation. -->
 
 **Asked at**: Meta · Scale AI
-**Source**: https://outcomeschool.com/blog/decoding-instructgpt · https://outcomeschool.com/blog/reinforcement-learning-from-human-feedback-rlhf
+**Source**: https://outcomeschool.com/blog/decoding-instructgpt and https://outcomeschool.com/blog/reinforcement-learning-from-human-feedback-rlhf
 
 **参考答案**
 
@@ -324,7 +326,7 @@ $$y=\sum_{i\in\text{top-}k} g_i\,E_i(x),\qquad g=\text{softmax}(\text{top-}k(W_r
 <!-- EN: Compare greedy, beam search, top-k, top-p and temperature sampling. When does each fail? -->
 
 **Asked at**: Google DeepMind · Apple · Perplexity
-**Source**: https://outcomeschool.com/blog/how-does-temperature-control-llm-output · https://outcomeschool.com/blog/how-do-top-k-and-top-p-sampling-work
+**Source**: https://outcomeschool.com/blog/how-does-temperature-control-llm-output and https://outcomeschool.com/blog/how-do-top-k-and-top-p-sampling-work
 
 **参考答案**
 
@@ -419,11 +421,15 @@ $$\text{FFN}(x)=W_2\big(\text{Swish}(xW_1)\odot xW_3\big),\qquad \text{Swish}(z)
 | $d_{ff}=4d$ 时参数 | $8d^2$ | $12d^2$ |
 | 等参数取法 | $d_{ff}=4d$ | $d_{ff}=\tfrac{8}{3}d$ |
 
-那个 $\tfrac{8}{3}$ 是最常被漏掉的细节：实现会把它取整到对硬件友好的倍数，所以 Llama 在 $d=4096$ 时用 $d_{ff}=14336$（3.5×，不是 2.67×）。
+那个 $\tfrac{8}{3}$ 的来历和取整是最常被搞混的细节：SwiGLU 有**三个**矩阵，等参数量要求
+
+$$3\,d\,d_{ff} = 2\,d\cdot 4d \;\Rightarrow\; d_{ff} = \tfrac{8}{3}d .$$
+
+实现再把它取整到硬件友好的倍数：$d=4096$ 时 $\tfrac{8}{3}\times 4096 \approx 10922.7$，取整到 256 的倍数得 **11008**——Llama-2 7B 用的正是 11008（2.69×）。Llama-3 的 **14336 = 3.5×4096** 不是取整结果，而是团队主动把 FFN 加宽（比 $\tfrac{8}{3}d$ 多约 31% 的 FFN 参数），用它换质量。
 
 代价：张量并行时要多切一个矩阵乘，激活显存更多。极小的边缘模型上，朴素 GELU 依然更简单。
 
-**速记**：SwiGLU 用一条 Swish 支路做乘法门控另一条支路，多了一次乘性交互；同参数同算力下困惑度更好。代价是多一个权重矩阵，所以 d_ff 从 4d 降到 8/3·d 保持参数不变（Llama 取 14336 是对齐硬件的近似）。
+**速记**：SwiGLU 用一条 Swish 支路做乘法门控另一条支路，多了一次乘性交互；同参数同算力下困惑度更好。代价是多一个权重矩阵，所以 $3dd_{ff}=2d\cdot4d\Rightarrow d_{ff}=8/3\cdot d$ 才等参数（Llama-2 取整为 11008；Llama-3 的 14336 是主动加宽到 3.5d）。
 
 ### 16. 请逐个张量地讲一遍 decoder-only transformer 的一次前向传播发生了什么。
 
@@ -450,9 +456,13 @@ $$\text{FFN}(x)=W_2\big(\text{Swish}(xW_1)\odot xW_3\big),\qquad \text{Swish}(z)
 | 10 | final norm → LM head | $[B,T,128256]$ | logits |
 | 11 | 采样 | $[B,T]$ | |
 
-量级自检：参数 $\approx 12Ld^2+Vd\approx 8$B；每 token FLOPs $\approx 2N\approx16$ GFLOP。$T{=}4096$ 的 prefill 是一大批矩阵乘，约 64 TFLOP → 在几百 TFLOP/s 有效算力下是零点几秒。decode 是 $T{=}1$：同样 16 GFLOP，但它必须**读完整 16 GB 权重**，3 TB/s 下约 200 tok/s——带宽受限，这正是批处理存在的理由。
+量级自检：参数不能再用 $12Ld^2+Vd$——那个式子假设 MHA + 4d 的 ReLU MLP + 权重绑定，这里三项都不成立，只会算出 $6.44\text{B}+0.53\text{B}=6.97\text{B}$，差整整 1B。按 GQA + 3.5d SwiGLU + 不共享 lm_head 逐项加：
 
-**速记**：按张量走一遍：ids → embedding → 每层（RMSNorm → QKV 投影 → RoPE → 因果注意力 → O 投影 → 残差 → RMSNorm → SwiGLU 上/门/下 → 残差）→ 末尾 norm → LM head → 采样。参数量 ≈12Ld²+Vd；prefill 是大矩阵乘，decode 是 T=1 的读权重，所以卡在带宽。
+$$\underbrace{32\,(2d^2+2dd_{kv}+3d\,d_{ff})}_{\text{32 层}}+\underbrace{2Vd}_{\text{embed}+\text{lm\_head}} = 32(33.55+8.39+176.16)\text{M} + 1.05\text{B} = 6.98\text{B}+1.05\text{B}\approx 8.03\text{B}$$
+
+（$d_{kv}=H_{kv}d_{head}=1024$。）每 token FLOPs $\approx 2N\approx16$ GFLOP。$T{=}4096$ 的 prefill 是一大批矩阵乘，约 64 TFLOP → 在几百 TFLOP/s 有效算力下是零点几秒。decode 是 $T{=}1$：同样 16 GFLOP，但它必须**读完整 16 GB 权重**，3 TB/s 下约 200 tok/s——带宽受限，这正是批处理存在的理由。
+
+**速记**：按张量走一遍：ids → embedding → 每层（RMSNorm → QKV 投影 → RoPE → 因果注意力 → O 投影 → 残差 → RMSNorm → SwiGLU 上/门/下 → 残差）→ 末尾 norm → LM head → 采样。参数量按 GQA/SwiGLU 逐项算（$32(2d^2+2dd_{kv}+3dd_{ff})+2Vd\approx8.03$B，$12Ld^2+Vd$ 会低算 1B）；prefill 是大矩阵乘，decode 是 T=1 的读权重，所以卡在带宽。
 
 
 ---
@@ -627,7 +637,8 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: Explain the architectural choices in a Llama-class model: why grouped-query attention, RoPE and SwiGLU instead of the vanilla 2017 Transformer? -->
 
-**Source**: https://outcomeschool.com/blog/grouped-query-attention · https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding · https://outcomeschool.com/blog/feed-forward-networks-in-llms
+**Asked at**: Meta
+**Source**: https://outcomeschool.com/blog/grouped-query-attention and https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding and https://outcomeschool.com/blog/feed-forward-networks-in-llms
 
 **参考答案**
 
@@ -648,6 +659,8 @@ PPL     = exp(H(P, Q))          # 单位 nat
 ### 2. 把 LLM 训练从 8 张 GPU 扩展到数千张 GPU 时，哪些东西会崩？现代技术栈如何应对？
 
 <!-- EN: What breaks when you scale LLM training from 8 GPUs to thousands, and how do modern stacks deal with it? -->
+
+**Asked at**: Meta
 
 **参考答案**
 
@@ -677,7 +690,8 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: Mistral 7B shipped with grouped-query attention and sliding-window attention. What does each buy you, and what does each cost? -->
 
-**Source**: https://outcomeschool.com/blog/grouped-query-attention · https://outcomeschool.com/blog/how-does-sliding-window-attention-work
+**Asked at**: Mistral AI
+**Source**: https://outcomeschool.com/blog/grouped-query-attention and https://outcomeschool.com/blog/how-does-sliding-window-attention-work
 
 **参考答案**
 
@@ -700,6 +714,7 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: Explain how a Mixtral-style sparse mixture-of-experts model works. Why does a ~47B-parameter model run at roughly the cost of a ~13B one? -->
 
+**Asked at**: Mistral AI
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -729,6 +744,7 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: Our flagship is a sparse MoE with ~10x more total than active parameters. Why is that architecture a good fit for private enterprise deployment, and where does it hurt? -->
 
+**Asked at**: Cohere
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -762,7 +778,8 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: Walk me through DeepSeekMoE. How is it different from a standard top-2 MoE like Mixtral? -->
 
-**Source**: https://outcomeschool.com/blog/mixture-of-experts
+**Asked at**: DeepSeek
+**Source**: https://outcomeschool.com/blog/mixture-of-experts and https://outcomeschool.com/blog/decoding-deepseek-v4
 
 **参考答案**
 
@@ -786,17 +803,21 @@ PPL     = exp(H(P, Q))          # 单位 nat
 
 <!-- EN: DeepSeek-V3 uses auxiliary-loss-free load balancing. What was wrong with the auxiliary loss, and how does the bias trick work? -->
 
+**Asked at**: DeepSeek
+
 **参考答案**
 
 一句话：辅助损失是第二个目标，天然与语言建模梯度打架；bias 把负载均衡移出梯度路径。
 
 **辅助损失的问题**：系数调高，路由均衡但模型明显变差（损失会把 token 推向未被充分使用的专家，不管该专家是否合适）；系数调低，路由坍塌——少数专家赢下每个 batch，拿到更多梯度、变得更强、赢得更多，形成富者愈富，最后大部分参数是死的。
 
-**bias 技巧**：为每个专家保留一个标量 $b_i$，它**只在选 top-k 时**加到亲和度分数上，不参与 gate 权重计算：
+**bias 技巧**：为每个专家保留一个标量 $b_i$，它**只在选 top-k 时**加到亲和度分数上，不参与 gate 权重计算。V3 的亲和度是 **sigmoid**（不是 softmax——softmax 会强制所有专家的分数耦合归一，而选路只需要每个专家的独立打分）：
 
-$$s_{i,t} = \text{softmax}(u_t^\top e_i),\quad \text{topk over } (s_{i,t} + b_i),\quad g_{i,t}=s_{i,t}\ \text{(unbiased)}$$
+$$s_{i,t}=\sigma(u_t^\top e_i),\qquad \mathcal{T}_t=\operatorname{TopK}\big(s_{i,t}+b_i,\ k\big),\qquad g_{i,t}=\frac{s_{i,t}}{\sum_{j\in\mathcal{T}_t} s_{j,t}}$$
 
-每步之后按负载误差的**符号**更新：过载专家 $b_i \mathrel{-}= \gamma$，欠载专家 $b_i \mathrel{+}= \gamma$。因为更新是符号式且完全在梯度路径之外，它相当于作用在 argmax 上的慢速积分控制器，不可能扭曲语言建模目标。
+即：选路用 $s+b$，权重用无偏的 $s$，并且**只在选中的 $k$ 个专家内重新归一化**——漏掉这一步输出尺度就不再是 1。
+
+每步之后按负载误差的**符号**更新：过载专家 $b_i \mathrel{-}= \gamma$，欠载专家 $b_i \mathrel{+}= \gamma$（目标负载为 $1/E$）。因为更新是符号式且完全在梯度路径之外，它相当于作用在 argmax 上的慢速积分控制器，不可能扭曲语言建模目标。
 
 **坑**：bias 只解决**全局**负载，不解决**单序列 / 单设备**负载。V3 仍保留一个极小的 sequence-wise 辅助损失，专门压制 batch 内不均衡——那才是专家并行里真正产生慢 rank 的原因。
 
@@ -806,6 +827,7 @@ $$s_{i,t} = \text{softmax}(u_t^\top e_i),\quad \text{topk over } (s_{i,t} + b_i)
 
 <!-- EN: What is multi-token prediction (MTP) and why train with it? -->
 
+**Asked at**: DeepSeek
 **Source**: https://outcomeschool.com/blog/decoding-deepseek-v4
 
 **参考答案**
@@ -832,6 +854,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Implement top-k MoE routing with a shared expert in PyTorch, and point out the efficiency and correctness traps. -->
 
+**Asked at**: DeepSeek
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -901,7 +924,8 @@ class MoELayer(nn.Module):
 
 <!-- EN: Kimi's headline feature is very long context. When you push from 8K to hundreds of thousands of tokens, what actually breaks first, and why? -->
 
-**Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms
+**Asked at**: Moonshot AI
+**Source**: https://outcomeschool.com/blog/lost-in-the-middle-problem-in-llms and https://www.youtube.com/watch?v=CGIhxIaOg3M&lc
 
 **参考答案**
 
@@ -923,7 +947,8 @@ class MoELayer(nn.Module):
 
 <!-- EN: Kimi K2 uses Multi-head Latent Attention (MLA). Explain what it does and how it compares to GQA for KV-cache reduction. -->
 
-**Source**: https://outcomeschool.com/blog/kv-cache-compression
+**Asked at**: Moonshot AI
+**Source**: https://outcomeschool.com/blog/kv-cache-compression and https://outcomeschool.com/blog/grouped-query-attention
 
 **参考答案**
 
@@ -952,6 +977,7 @@ $$c_t \in \mathbb{R}^{512},\quad k^{R}_t \in \mathbb{R}^{64}\;\Rightarrow\; K_t 
 
 <!-- EN: Kimi K2 is a 1T-parameter MoE with ~32B active per token and hundreds of experts. Explain the routing and the systems cost of training it. -->
 
+**Asked at**: Moonshot AI
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -978,6 +1004,7 @@ $$c_t \in \mathbb{R}^{512},\quad k^{R}_t \in \mathbb{R}^{64}\;\Rightarrow\; K_t 
 
 <!-- EN: How do you take a model trained at 8K–32K and make it work at 128K or more? -->
 
+**Asked at**: Moonshot AI
 **Source**: https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
@@ -1009,6 +1036,7 @@ $$c_t \in \mathbb{R}^{512},\quad k^{R}_t \in \mathbb{R}^{64}\;\Rightarrow\; K_t 
 
 <!-- EN: GLM's original pre-training objective is autoregressive blank infilling. How does it differ from BERT and GPT, and why did the team argue it unifies understanding and generation? -->
 
+**Asked at**: 智谱 AI
 **Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
@@ -1034,6 +1062,7 @@ $$c_t \in \mathbb{R}^{512},\quad k^{R}_t \in \mathbb{R}^{64}\;\Rightarrow\; K_t 
 
 <!-- EN: GLM-4.5 is an MoE with 355B total but 32B active parameters. Explain the economics: what does that split buy you and what does it cost? -->
 
+**Asked at**: 智谱 AI
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1061,6 +1090,7 @@ $$c_t \in \mathbb{R}^{512},\quad k^{R}_t \in \mathbb{R}^{64}\;\Rightarrow\; K_t 
 
 <!-- EN: Implement a top-k MoE router in PyTorch. Then contrast auxiliary-loss load balancing with a loss-free approach. -->
 
+**Asked at**: 智谱 AI
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1117,6 +1147,8 @@ class TopKRouter(nn.Module):
 
 <!-- EN: What is Multi-Token Prediction (MTP), why add an MTP layer, and how does it help at inference time? -->
 
+**Asked at**: 智谱 AI
+
 **参考答案**
 
 一句话：MTP 预测 $t{+}2, t{+}3, \dots$，额外的小 block 是建模"承诺了 $t{+}1$ 之后"的最小容量，推理时直接当 draft。
@@ -1144,6 +1176,8 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 ### 5. GLM 从 GLM-130B 起就是中英双语模型。当一个模型要同时服务好两种语言时，分词、数据和评测各会发生什么变化？
 
 <!-- EN: GLM has been bilingual Chinese/English since GLM-130B. What changes in tokenization, data and evaluation when a model must serve both languages well? -->
+
+**Asked at**: 智谱 AI
 
 **参考答案**
 
@@ -1175,6 +1209,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Qwen uses byte-level BPE with a ~151K vocabulary, augmented for multilingual coverage and with digits split into single characters. Why those choices, and what are the trade-offs? -->
 
+**Asked at**: 阿里巴巴
 **Source**: https://outcomeschool.com/blog/bpe-in-llms
 
 **参考答案**
@@ -1201,6 +1236,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Qwen3 unifies a thinking mode and a non-thinking mode in one model with a caller-settable thinking budget. How would you train that, and how would you serve it? -->
 
+**Asked at**: 阿里巴巴
 **Source**: https://outcomeschool.com/blog/large-reasoning-models
 
 **参考答案**
@@ -1231,6 +1267,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Qwen ships both dense and MoE models (30B with ~3B active; 235B with ~22B active). When would you pick the 30B-A3B MoE over a 32B dense? -->
 
+**Asked at**: 阿里巴巴
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1259,11 +1296,12 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Qwen2.5 extends context to 128K (and ~1M for Turbo) using YaRN plus Dual Chunk Attention, mostly training-free. Explain how, and why post-hoc extension is attractive. -->
 
+**Asked at**: 阿里巴巴
 **Source**: https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
 
-一句话：YaRN 按波长分段处理 RoPE 维度并做温度校正，DCA 把长序列切块把 $O(n^2)$ 压到近线性。
+一句话：YaRN 按波长分段处理 RoPE 维度并做温度校正，DCA 把长序列切块、把跨块的相对位置索引压回训练见过的区间，让外推不崩——它省的是**位置分布的偏移**，不是算力。
 
 **YaRN（NTK-by-parts）**——按波长区别对待 RoPE 维度：
 
@@ -1275,13 +1313,23 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 外加**注意力温度**校正 $\sqrt{1/t}$，补偿更长上下文带来的熵变化——不做这一步，长上下文注意力过于平坦，perplexity 看着正常而质量已下降。
 
-**双块注意力（Dual Chunk Attention）**——服务侧技巧。把序列切成块（如 32K）。块内：普通因果注意力，用相对位置。跨块：每个前序块用 keys 的压缩表示。结果：注意力成本随块数近似线性增长而不是随 token 平方增长，且大多数配对的相对位置编码仍落在**训练过的**范围内。
+**双块注意力（Dual Chunk Attention）**——服务侧的**位置重映射**技巧，注意它不压 key。把序列按预训练长度切块（如 32K），于是任意 query-key 对的相对距离分三种情形，分别用不同的位置表示：
+
+| 情形 | 用的相对位置 |
+| :--- | :--- |
+| 同块内 | 块内相对位置 $[0, L)$，与训练时完全一致 |
+| 相邻前一块 | 块间相对位置 $[L, 2L)$，训练时也见过 |
+| 更远的前序块 | 把该块的**相对位置索引映射回块内区间**，复用训练过的相对位置 |
+
+被「压缩」的是**相对位置索引**（把远到训练分布之外的距离折算回训练区间），K/V 一个都没压：所有前序块的 key 仍然全量参与注意力。所以 **DCA 不改变复杂度**，块间注意力仍是 $O(n^2)$；Qwen2.5-1M 的算力节省来自另外加的稀疏（top-k）注意力，和 DCA 是两件独立的事。DCA 换来的收益是每个 query-key 对的相对距离都落在模型训练过的范围内，于是 128K/1M 上质量不塌。
+
+一句话区分：YaRN 改**每个位置的旋转角**，DCA 改**跨块 attention score 用的位置索引**，稀疏注意力才动**算力**。
 
 **后验扩展为什么有吸引力**：你只需付几十亿 token 的继续预训练加一次配置改动，而不是重训一个预训练已花掉 10–15T token 的模型。你保住短上下文质量，可以从同一基座产出 128K 与 1M 两个变体，还能按客户调缩放因子。
 
 **诚实的局限**："基本免训练" ≠ 免费。若连一小段长上下文继续预训练都不做，YaRN 扩展出来的模型在长输入**推理**上会退化，哪怕检索测试通过——它能找到一根针，但没法比较两根针。
 
-**速记**：YaRN 按波长分段——高频维不动、低频维插值、中间渐变，并做 $\sqrt{1/t}$ 温度校正；DCA 切块，块内普通因果注意力、块间用压缩表示，把 $O(n^2)$ 压成近线性且让相对位置留在训练范围。后验扩展便宜，但纯免训练版常"能检索不会推理"。
+**速记**：YaRN 按波长分段——高频维不动、低频维插值、中间渐变，并做 $\sqrt{1/t}$ 温度校正；DCA 切块后把远块的相对位置索引折回训练区间（K/V 全量参与，复杂度仍是 $O(n^2)$，省算力靠另加的稀疏注意力）。后验扩展便宜，但纯免训练版常"能检索不会推理"。
 
 
 ---
@@ -1292,7 +1340,8 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Why is tokenization the first bottleneck for Indian-language LLMs, and how does a low-fertility tokenizer change the economics? -->
 
-**Source**: https://outcomeschool.com/blog/bpe-in-llms
+**Asked at**: Sarvam AI
+**Source**: https://outcomeschool.com/blog/bpe-in-llms and https://www.youtube.com/watch?v=sK2s9I84EVI
 
 **参考答案**
 
@@ -1323,7 +1372,8 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Why did transformers displace RNNs for language modelling, and what exactly does the KV cache buy you at inference time? -->
 
-**Source**: https://outcomeschool.com/blog/how-do-rnns-and-transformers-differ · https://outcomeschool.com/blog/kv-cache-in-llms
+**Asked at**: Amazon（AWS）
+**Source**: https://outcomeschool.com/blog/how-do-rnns-and-transformers-differ and https://outcomeschool.com/blog/kv-cache-in-llms
 
 **参考答案**
 
@@ -1376,7 +1426,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 <!-- EN: Trace the evolution from MHA to MQA, GQA and MLA. What does each step actually save? -->
 
 **Asked at**: 字节跳动
-**Source**: https://outcomeschool.com/blog/grouped-query-attention
+**Source**: https://outcomeschool.com/blog/grouped-query-attention and https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
 
@@ -1387,11 +1437,11 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 | MHA | `h` | 1×（基准） | 质量最好，显存最差 |
 | MQA | 1 | `1/h` | 显存收益巨大，但质量下降、大规模训练不稳 |
 | GQA | `g`（如 8） | `g/h` | 接近 MHA 的质量，缓存只剩零头；今天的标准做法 |
-| MLA | 低秩隐向量 `c` | 压缩到约 `d_c/h·d_h` | 压缩率最高，但要做权重吸收 + 自研 kernel |
+| MLA | 低秩隐向量 `c` + 解耦 RoPE key | $(d_c+d_h^{R})/(2hd_h)$ | 压缩率最高，但要做权重吸收 + 自研 kernel |
 
 要记住的公式：每 token 缓存 = `2 · n_layers · n_kv_heads · d_head · bytes`。以 80 层、`d_head=128`、fp16 的 70B 级模型为例：MHA（64 个 KV 头）≈ 2.6 MB/token，GQA-8 ≈ 0.33 MB/token——同一张卡上就是 8 倍的并发差。
 
-MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出一段解耦的 RoPE 维度，让位置信息不被压缩掉。代价是：现成注意力 kernel 用不了，缓存要么解压、要么吸收进 `W_q`/`W_o`。
+MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出一段解耦的 RoPE 维度，让位置信息不被压缩掉。所以每 token 每层只存 $d_c+d_h^{R}$ 个元素，不是 $2hd_h$ 个：DeepSeek-V2 是 $512+64=576$ 个，MHA（$h=128$、$d_h=128$）是 $2\times128\times128=32768$ 个，比例 $576/32768\approx1.8\%$——按上表 64 头的口径则是 $576/(2\times64\times128)\approx3.5\%$。分子里那个 $+d_h^{R}$ 不能省，分母的 $2$ 也不能省（MHA 存 K 和 V 两份）。代价是：现成注意力 kernel 用不了，缓存要么解压、要么吸收进 `W_q`/`W_o`。
 
 什么时候不必折腾：如果负载是 prefill 主导（长输入、短输出），KV 缓存根本不是瓶颈，应该去优化注意力的算力开销。
 
@@ -1424,7 +1474,6 @@ MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出
 <!-- EN: Can a decoder-only model beat an encoder-only one on a classification task? -->
 
 **Asked at**: 字节跳动
-**Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
 
@@ -1486,7 +1535,7 @@ SwiGLU 改的是激活函数和参数量：
 | 原因 | 机制 |
 | :--- | :--- |
 | 一个目标覆盖所有任务 | 在原始文本上做下一 token 预测；翻译/问答/摘要都变成"续写 prompt"——不需要任务专用头，也不需要成对数据 |
-| 没有注意力瓶颈 | 编码器-解码器要把整段源文本挤过一个固定宽度的交叉注意力接口；只有解码器的模型在每一层都能直接关注原始 token |
+| 少一层重写，能直接看原始 token | 注意这里没有"定宽瓶颈"：交叉注意力在**每一层**都能访问编码器全部 $n$ 个位置的 $[n,d]$ 表示。真实差别是解码器只能 attend 编码器**重写后**的表示，而非原始 token；并且容量与梯度要分摊到两个栈上 |
 | 更容易扩展 | 单一栈，不用平衡编码器/解码器，没有交叉注意力；KV cache 管理统一（这正是分页与前缀缓存能做得简单的原因） |
 | 上下文学习可用 | 示例天然可以塞进前缀；编码器-解码器因为源文本被单独编码，利用得没那么好 |
 | 训练效率 | 每份文档的每个 token 都是训练信号；编码器-解码器要把容量花在编码器的重建任务上 |
@@ -1495,14 +1544,13 @@ SwiGLU 改的是激活函数和参数量：
 
 诚实的一点：语音翻译和部分多模态模型仍以编码器-解码器为主，因为输入输出模态差异足够大，独立编码器是值得的。只有解码器是在**文本**上赢了，不是普适真理。
 
-**速记**：生成任务只需要因果前缀，一个 next-token 目标就能覆盖所有任务、且避免固定宽度交叉注意力瓶颈、KV 管理统一；代价是无双向上下文（分类任务仍应选 BERT 类），语音/多模态仍常用编码器-解码器。
+**速记**：生成任务只需要因果前缀，一个 next-token 目标就能覆盖所有任务、单一栈省掉编码器与交叉注意力、每层都能直接在原始 token 表示上操作（交叉注意力并不存在定宽瓶颈）；代价是无双向上下文（分类任务仍应选 BERT 类），语音/多模态仍常用编码器-解码器。
 
 ### 2. pre-norm 和 post-norm 有什么区别，它如何影响训练稳定性？
 
 <!-- EN: What is the difference between pre-norm and post-norm, and how does it affect training stability? -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
 
@@ -1591,7 +1639,6 @@ MoE 把**总参数**与**每 token 算力**解耦：容量（知识）可以变�
 <!-- EN: Take Qwen and DeepSeek as examples: introduce a model you know well and compare the two technically. -->
 
 **Asked at**: 腾讯
-**Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
 
@@ -1621,6 +1668,7 @@ MoE 把**总参数**与**每 token 算力**解耦：容量（知识）可以变�
 
 <!-- EN: How does MoE work, how do you balance load, and is expert activation a batch-level, token-level or other decision? Implement a MoE in Python. -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1682,6 +1730,8 @@ y, aux = moe(torch.randn(2, 16, 512))
 
 <!-- EN: NCCL timeouts are common in thousand-GPU training. How do you locate and fix them? -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
+
 **参考答案**
 
 NCCL 超时几乎从不意味着 NCCL 坏了。它意味着**某个 rank 没走到集合操作**，其余 rank 在 kernel 里等到看门狗触发（PyTorch 默认 600s，部分作业 1800s）。
@@ -1706,6 +1756,7 @@ NCCL 超时几乎从不意味着 NCCL 坏了。它意味着**某个 rank 没走�
 
 <!-- EN: How do you do kernel fusion, and why can fusion make things slower? What is warp specialization on Hopper? -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/decoding-flash-attention
 
 **参考答案**
@@ -1730,6 +1781,7 @@ NCCL 超时几乎从不意味着 NCCL 坏了。它意味着**某个 rank 没走�
 
 <!-- EN: How does KV cache access differ between prefill and decode? -->
 
+**Asked at**: 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
 
 **参考答案**
@@ -1751,7 +1803,7 @@ NCCL 超时几乎从不意味着 NCCL 坏了。它意味着**某个 rank 没走�
 
 1. **chunked prefill** —— 长 prompt 切片，与 decode 步交错，避免一个 30k token 的 prefill 卡住其他请求的 token 间延迟。
 2. **前缀缓存（prefix caching）** —— 共享 system prompt 的 prefill KV 只算一次并复用，是 chat 负载里最大的一笔收益。
-3. **PagedAttention** —— KV 按固定块分配，不再为 max_length 预留而浪费 30–60% 的 HBM。
+3. **PagedAttention** —— KV 按固定块分配，不再为 `max_length` 预留连续 buffer：vLLM 论文（Kwon et al., SOSP'23）测得改造前 60–80% 的 KV 显存被浪费（只有 20.4–38.2% 存真实 token），分页后接近零。
 4. **prefill/decode 分离部署** —— 两者需要的硬件配比不同（prefill 吃算力，decode 吃带宽 + 大 batch）。
 
 **速记**：prefill 是算力受限的大 GEMM，KV 只写一遍；decode 是带宽受限的 GEMV，每生成一个 token 都要把整个 KV 读一遍。所以 decode 优化方向是缩 KV（GQA/MLA）、分页、前缀缓存和 chunked prefill。
@@ -1765,6 +1817,7 @@ NCCL 超时几乎从不意味着 NCCL 坏了。它意味着**某个 rank 没走�
 
 <!-- EN: What does the FFN layer in a Transformer do, and why does it expand before contracting? -->
 
+**Asked at**: 滴滴
 **Source**: https://outcomeschool.com/blog/feed-forward-networks-in-llms
 
 **参考答案**
@@ -1775,7 +1828,7 @@ attention 在**位置之间**混合信息；FFN 在**每个位置内部**变换�
 h = W2 · act(W1 · x + b1) + b2      # d_model -> d_ff -> d_model
 ```
 
-在现代 decoder block 的门控变体里是 `h = W2 ( SiLU(W1 x) ⊙ (W3 x) )`，其中 `d_ff ≈ 4·d_model`（SwiGLU 用 `8/3·d_model`，是为了去掉常数项后参数量持平）。
+在现代 decoder block 的门控变体里是 `h = W2 ( SiLU(W1 x) ⊙ (W3 x) )`，其中 `d_ff ≈ 4·d_model`（SwiGLU 用 `8/3·d_model`：它有**三个**矩阵，要 $3\,d\,d_{ff}=2\,d\cdot4d$ 才能与 4d 的 ReLU MLP 等参数，所以 $d_{ff}=8d/3$，与偏置/常数项无关）。
 
 **它具体做什么**：绝大多数参数住在这里（稠密 transformer 约三分之二的权重），模型学到和取用的模式也在这里。值得引用的可解释性结论：`W1` 的行像**键**——在特定输入特征上触发的模式检测器；`W2` 的列像**值**向量——把一个方向写回残差流。所以 FFN 充当键值记忆，这也解释了为什么大部分事实知识被归因于它，以及为什么 MoE（恰好把这层稀疏化）能成立。
 
@@ -1789,6 +1842,7 @@ h = W2 · act(W1 · x + b1) + b2      # d_model -> d_ff -> d_model
 
 <!-- EN: Compare MHA, MQA, GQA and MLA: pros and cons of each. -->
 
+**Asked at**: 滴滴
 **Source**: https://outcomeschool.com/blog/grouped-query-attention and https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
@@ -1814,6 +1868,7 @@ h = W2 · act(W1 · x + b1) + b2      # d_model -> d_ff -> d_model
 
 <!-- EN: Compare PPO, DPO and GRPO, and write down the SFT loss. -->
 
+**Asked at**: 滴滴
 **Source**: https://outcomeschool.com/blog/reinforcement-learning-from-human-feedback-rlhf and https://outcomeschool.com/blog/group-relative-policy-optimization-grpo
 
 **参考答案**
@@ -1844,6 +1899,8 @@ L_SFT = - (1/N) Σ_{i=1..N} Σ_{t=1..|y_i|} log π_θ( y_{i,t} | x_i, y_{i,<t} )
 
 <!-- EN: How do you build the loss mask for multi-turn message training? -->
 
+**Asked at**: 滴滴
+
 **参考答案**
 
 mask 决定模型**被训练去生成**哪些 token。差一个 token，模型就会学着预测用户的下一条消息——损失曲线漂亮，采样结果废物。
@@ -1872,6 +1929,8 @@ mask 决定模型**被训练去生成**哪些 token。差一个 token，模型�
 
 <!-- EN: Walk through the Transformer, and explain why the encoder needs an FFN. -->
 
+**Asked at**: 美团
+
 **参考答案**
 
 单个编码器块的数据流：`x → LayerNorm → 多头自注意力 → 残差 → LayerNorm → FFN → 残差`；堆 N 层后接任务头。解码器在此基础上加掩码自注意力，以及对编码器输出的交叉注意力。
@@ -1880,19 +1939,20 @@ FFN 为什么不可省：
 
 | 作用 | 机制 |
 | :--- | :--- |
-| 逐 token 非线性 | 注意力是 value 的**加权平均**——值的凸组合。后面若不接非线性映射，堆多少层仍等价于输入的线性映射，深度白给 |
+| 逐 token 非线性 | 注意力的 softmax 权重依赖输入，本身**已经非线性**——错的直觉是"纯注意力会退化成线性映射"。它真正缺的是**逐 token 的特征变换**：输出是 value 的凸组合，落在 value 张成的凸包内，同一个线性映射作用在每个位置上，没有通道混合。而且纯注意力堆叠会**秩塌缩**（Dong et al. 2021：表示的有效秩随层数指数下降），深层表示退化 |
 | 特征变换 | 注意力在位置间**路由**信息；FFN 以 4 倍宽度**加工**到达的信息，给中间概念留出空间 |
 | 键值记忆视角 | 第一个 FFN 矩阵像模式检测器，第二个像把关联写回的查表——这就是可解释性里的「FFN as key-value memory」 |
 | 容量 | 注意力参数是 O(d²) 且位置共享；约 2/3 的参数住在 FFN 里 |
 
 两个工程推论：因为参数在 FFN，MoE 换的是 **FFN 层**而不是注意力；又因为注意力只会做平均，把注意力换成线性变体，质量损失主要集中在需要尖锐 token 对 token 查找的任务（复制、精确回忆）上，而 FFN 可以完全不动。
 
-**速记**：attention 只是对 value 的凸组合，没有 FFN 的非线性逐 token 变换，堆多少层都等价于线性映射；FFN 占约 2/3 参数，所以 MoE 换的是 FFN 而不是 attention。
+**速记**：attention 只做位置间的信息路由，输出是 value 的凸组合——它缺的是逐 token 的特征变换与通道容量（纯注意力堆叠还会秩塌缩，不是因为"退化成线性"）；FFN 提供这部分非线性，占约 2/3 参数，所以 MoE 换的是 FFN 而不是 attention。
 
 ### 2. 你了解哪些注意力变体？现场写出自注意力公式。
 
 <!-- EN: Which attention variants do you know? Write the self-attention formula on the spot. -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/math-behind-attention-qkv and https://outcomeschool.com/blog/self-attention-in-transformers
 
 **参考答案**
@@ -1920,6 +1980,7 @@ $\sqrt{d_k}$ 把 logits 方差压到 O(1)，softmax 才不会饱和；$M$ 是加
 
 <!-- EN: How does MLA reduce the KV cache? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
@@ -1944,6 +2005,7 @@ MLA（DeepSeek-V2）不再按头缓存 K 和 V，而是每个 token 缓存**一�
 
 <!-- EN: How does Qwen extrapolate to longer contexts (NTK-aware scaling, YaRN)? -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
@@ -1969,6 +2031,7 @@ Qwen 直接发 YaRN 配置（如在 32k 基座上 factor 4），短 prompt 走�
 
 <!-- EN: How does MoE work, how is load balanced, and is activation a batch-level or token-level decision? Implement a MoE in Python. -->
 
+**Asked at**: 美团
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1999,25 +2062,38 @@ class MoE(nn.Module):
             nn.Sequential(nn.Linear(d_model, d_ff), nn.GELU(), nn.Linear(d_ff, d_model))
             for _ in range(n_experts)
         ])
-        self.bias = torch.zeros(n_experts)   # 无辅助损失的均衡偏置
+        # 均衡偏置必须 register_buffer：普通张量不会跟 module 一起搬设备，
+        # x 在 CUDA 上时 gate(x) + bias 会直接 device mismatch，也不会进 state_dict
+        self.register_buffer("bias", torch.zeros(n_experts))
+        self.gamma = 1e-3                     # 偏置每步的步长
 
     def forward(self, x):                    # x: [B, T, D]
         B, T, D = x.shape
-        logits = self.gate(x) + self.bias     # [B, T, E]
-        probs = F.softmax(logits, dim=-1)
-        w, idx = probs.topk(self.top_k, dim=-1)          # [B,T,k]
-        w = w / w.sum(-1, keepdim=True)                  # 重新归一
-        flat = x.reshape(-1, D)
+        flat = x.reshape(-1, D)                          # [N, D]
+        probs = F.softmax(self.gate(flat), dim=-1)       # [N, E] 无偏门控分布
+        sel = probs + self.bias                          # 偏置只进选路，不进权重
+        idx = sel.topk(self.top_k, dim=-1).indices       # [N, k]
+        w = probs.gather(-1, idx)                        # 权重取自无偏 probs
+        w = w / w.sum(-1, keepdim=True)                  # 选中集合内归一化
         out = torch.zeros_like(flat)
-        flat_idx, flat_w = idx.view(-1, self.top_k), w.view(-1, self.top_k)
         for e, expert in enumerate(self.experts):
-            mask = flat_idx == e
+            mask = idx == e
             tok, slot = mask.nonzero(as_tuple=True)      # 路由到 e 的 token
             if tok.numel() == 0:
                 continue
-            out.index_add_(0, tok, expert(flat[tok]) * flat_w[tok, slot].unsqueeze(-1))
+            out.index_add_(0, tok, expert(flat[tok]) * w[tok, slot].unsqueeze(-1))
+        self._last_idx, self._n_tokens = idx.detach(), flat.size(0)
         return out.view(B, T, D)
+
+    @torch.no_grad()
+    def update_bias(self):
+        """按负载误差的符号更新：过载 -γ，欠载 +γ。不是梯度，是慢速积分控制。"""
+        load = torch.bincount(self._last_idx.flatten(), minlength=self.bias.numel()).float()
+        load = load / self._n_tokens                     # 均匀时 load.mean() = 1/E
+        self.bias += self.gamma * torch.sign(load.mean() - load)
 ```
+
+bias 的两条硬约束：它**只加在选路分数上**（`probs + bias`），门控权重仍取自无偏 `probs` 并在选中集合内归一；且必须配一个**更新规则**（`update_bias`），否则它就是个永远为 0 的死参数——这正是"照抄 DeepSeek 公式却完全不均衡"的常见 bug。
 
 **关键点**
 
@@ -2037,13 +2113,15 @@ class MoE(nn.Module):
 
 <!-- EN: Walk me through what actually happens when someone calls AutoModelForCausalLM.from_pretrained(…, device_map=“auto”, torch_dtype=“auto”). -->
 
+**Asked at**: Hugging Face
+
 **参考答案**
 
 结论：九步，按顺序：
 
 1. **解析仓库** —— `repo_id` + `revision` → `~/.cache/huggingface/hub/models--org--name/snapshots/<sha>/` 下的本地快照；可变分支（`main`）只解析一次到 commit sha，记下的就是那个 sha。
 2. **读 `config.json`** → `AutoConfig`，再按 `architectures[0]` 懒加载 modeling 模块（这也是 `import transformers` 很快的原因）。
-3. **`torch_dtype="auto"`** 从**checkpoint 的元数据**（首个分片）里读 dtype，而不是从 `config.json`；新版本里这个参数叫 `dtype`。
+3. **`torch_dtype="auto"`** 走 `_get_dtype`：优先读 `config.json` 里的 `torch_dtype`（新版字段名改成 `dtype`，参数字面量也改叫 `dtype`）；只有 config 里缺失或为 `"auto"` 时，才回落到 checkpoint 首个浮点权重的 dtype。两条都拿不到就用 `torch.get_default_dtype()`。所以"完全不看 config.json"是错的，config 是第一优先。
 4. **在 `meta` 设备上实例化** —— `init_empty_weights()` 创建的参数没有存储。这也是 `low_cpu_mem_usage=True` 成为默认的原因：先分配 70B 随机权重再覆盖，曾经让主机 RAM 峰值翻倍。
 5. **`device_map="auto"`** 跑 accelerate 的 `infer_auto_device_map`：模块大小来自 meta 张量，可用显存来自 `torch.cuda.mem_get_info()` 减去 `max_memory` 余量。
 6. **逐分片加载** —— `model.safetensors.index.json` 给出张量→文件映射；每个分片被 `mmap`，张量直接拷到目标设备。
@@ -2059,7 +2137,8 @@ class MoE(nn.Module):
 
 <!-- EN: Compare BPE, WordPiece and Unigram tokenization. Why is `tokenizers` written in Rust, and what tokenizer bugs bite people in practice? -->
 
-**Source**: https://outcomeschool.com/blog/bpe-in-llms ; https://www.youtube.com/watch?v=sK2s9I84EVI
+**Asked at**: Hugging Face
+**Source**: https://outcomeschool.com/blog/bpe-in-llms and https://www.youtube.com/watch?v=sK2s9I84EVI
 
 **参考答案**
 
@@ -2090,6 +2169,8 @@ Rust 的两个具体收益：真线程（rayon 并行预分词，Python 的 GIL 
 ### 3. chat template 解决什么问题？忽略它会出什么错？
 
 <!-- EN: What problem do chat templates solve, and what goes wrong when they're ignored? -->
+
+**Asked at**: Hugging Face
 
 **参考答案**
 
@@ -2123,7 +2204,8 @@ Rust 的两个具体收益：真线程（rayon 并行预分词，Python 的 GIL 
 
 <!-- EN: A conversation runs past the context window. What do you keep, and how do you decide? -->
 
-**Source**: https://outcomeschool.com/blog/how-does-context-compaction-work · https://outcomeschool.com/blog/ai-agent-memory
+**Asked at**: Character.AI
+**Source**: https://outcomeschool.com/blog/how-does-context-compaction-work and https://outcomeschool.com/blog/ai-agent-memory
 
 **参考答案**
 
