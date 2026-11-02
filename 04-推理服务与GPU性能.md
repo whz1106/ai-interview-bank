@@ -43,7 +43,9 @@
 
 ## 跨公司通用
 
-### 1. Explain the prefill and decode phases. Why is prefill compute-bound and decode memory-bandwidth-bound?
+### 1. 解释 prefill 与 decode 阶段。为什么 prefill 是计算受限，而 decode 是内存带宽受限？
+
+<!-- EN: Explain the prefill and decode phases. Why is prefill compute-bound and decode memory-bandwidth-bound? -->
 
 **Asked at**: Moonshot AI · NVIDIA · Together AI · ByteDance · Alibaba (Taobao/Tmall, Alibaba Cloud)
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
@@ -63,7 +65,9 @@ decode 每步**每条序列只出一个 token**：同样的权重被完整重读
 
 **速记**：prefill 是 GEMM、算力瓶颈；decode 每步只出一个 token、权重读一遍，2 FLOP/byte，纯显存带宽瓶颈；批处理是让 decode 重回算力密集的唯一手段。
 
-### 2. What is continuous (in-flight) batching and why did it replace static batching?
+### 2. 什么是连续批处理（continuous / in-flight batching），为什么它取代了静态批处理？
+
+<!-- EN: What is continuous (in-flight) batching and why did it replace static batching? -->
 
 **Asked at**: Anthropic · xAI · Mistral AI · NVIDIA · Together AI
 **Source**: https://outcomeschool.com/blog/continuous-batching-in-llms
@@ -87,7 +91,9 @@ decode 每步**每条序列只出一个 token**：同样的权重被完整重读
 
 **速记**：静态批处理被最慢请求拖死、填充浪费，槽位利用率常只有三到五成；连续批处理逐步重组 batch，序列一结束立刻换新请求，换来数倍吞吐，但单请求延迟不变、甚至更差。
 
-### 3. How does PagedAttention work, and what problem of KV-cache fragmentation does it solve?
+### 3. PagedAttention 是如何工作的，它解决了 KV cache 碎片化的什么问题？
+
+<!-- EN: How does PagedAttention work, and what problem of KV-cache fragmentation does it solve? -->
 
 **Asked at**: NVIDIA · Together AI
 **Source**: https://outcomeschool.com/blog/paged-attention-in-llms · https://outcomeschool.com/blog/how-does-vllm-work
@@ -110,7 +116,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：KV 必须按最大长度预留，导致六到八成显存被浪费；PagedAttention 用固定大小 block + block table 做虚拟内存式管理，浪费降到 4% 以下，外加前缀共享，直接换成并发数。
 
-### 4. What is speculative decoding? Why is output quality preserved, and when does it not help?
+### 4. 什么是投机解码（speculative decoding）？为什么输出质量不受损，以及在什么情况下它没有帮助？
+
+<!-- EN: What is speculative decoding? Why is output quality preserved, and when does it not help? -->
 
 **Asked at**: NVIDIA · Together AI · ByteDance
 **Source**: https://outcomeschool.com/blog/speculative-decoding
@@ -134,7 +142,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：小模型起草、大模型一次前向并行校验，接受率用 `min(1, p/p)` 的拒绝采样保证**分布完全一致**；大 batch 下校验成本随 k 线性增长，收益消失，所以它是低并发降延迟工具。
 
-### 5. Explain prefix caching / prompt caching. When should you use it, and what invalidates a cached prefix?
+### 5. 解释前缀缓存（prefix caching）/ prompt caching。什么时候该用，以及什么会使已缓存的前缀失效？
+
+<!-- EN: Explain prefix caching / prompt caching. When should you use it, and what invalidates a cached prefix? -->
 
 **Asked at**: Moonshot AI · Character.AI · ByteDance
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
@@ -161,7 +171,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：键是"精确 token 前缀"的哈希链，不是语义；任何前置改动（系统提示、工具顺序、时间戳、JSON 键序、LoRA、分词器）都会让整段失效——稳定内容放前面是唯一有效设计。
 
-### 6. Compare FP16, BF16, FP8, INT8, INT4 and FP4 for serving. What breaks at each step down?
+### 6. 比较 FP16、BF16、FP8、INT8、INT4 与 FP4 在推理服务中的表现。每往下走一档会坏在哪里？
+
+<!-- EN: Compare FP16, BF16, FP8, INT8, INT4 and FP4 for serving. What breaks at each step down? -->
 
 **Asked at**: Mistral AI · Apple · NVIDIA · Together AI · Character.AI
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
@@ -186,7 +198,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：BF16 是无脑默认；FP8 要处理激活离群值，INT8 需 SmoothQuant，INT4 权重-only 在 7B 以下崩、且只降 decode 不降 prefill；KV cache 量化要单独验证长上下文。
 
-### 7. Compare tensor, pipeline, data, sequence and expert parallelism. When do you combine them?
+### 7. 比较张量并行、流水线并行、数据并行、序列并行与专家并行。什么时候需要组合使用？
+
+<!-- EN: Compare tensor, pipeline, data, sequence and expert parallelism. When do you combine them? -->
 
 **Asked at**: Google DeepMind · Meta · Amazon (AWS) · NVIDIA
 
@@ -208,7 +222,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：带宽最高的维度放最内层——TP 关在 NVLink 单机 8 卡内，PP 跨机，DP 最外；TP 跨机做 all-reduce 是 decode 延迟的头号杀手，PP 在 batch 1 全是气泡。
 
-### 8. Estimate the GPU memory needed to serve a 70B model: weights, KV cache, activations, fragmentation.
+### 8. 估算服务一个 70B 模型所需的 GPU 显存：权重、KV cache、激活值、碎片。
+
+<!-- EN: Estimate the GPU memory needed to serve a 70B model: weights, KV cache, activations, fragmentation. -->
 
 **Asked at**: NVIDIA · ByteDance
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/paged-attention-in-llms
@@ -233,7 +249,9 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 **速记**：先算权重（BF16 140GB），再按 `每 token 320KB × 长度` 算 KV；真正 OOM 的往往是 prefill 的 vocab logits 瞬时分配，而 GQA 的 KV 头数直接决定并发上限。
 
-### 9. What are TTFT, TPOT, ITL and throughput, and how do they trade against each other?
+### 9. 什么是 TTFT、TPOT、ITL 与吞吐，它们之间如何相互权衡？
+
+<!-- EN: What are TTFT, TPOT, ITL and throughput, and how do they trade against each other? -->
 
 **Asked at**: Microsoft · Apple · Perplexity
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization · https://www.youtube.com/watch?v=XD8DD4cEHu0
@@ -262,7 +280,9 @@ Little's law 把一切串起来：`并发 = 吞吐 × 延迟`。固定 SLO 下�
 
 **速记**：TPOT 是均值，用户感知的是 ITL p99，而 p99 尖刺基本都来自长 prefill 抢占 batch；批越大吞吐越高、TPOT 越差，扩容要按 Little's law 算并发而不是 QPS。
 
-### 10. Do the roofline maths: how many tokens/sec can one H100 produce for a 70B model at batch size 1?
+### 10. 做一下 roofline 计算：在 batch size 为 1 时，一张 H100 服务 70B 模型每秒能产出多少 token？
+
+<!-- EN: Do the roofline maths: how many tokens/sec can one H100 produce for a 70B model at batch size 1? -->
 
 **Asked at**: NVIDIA · Together AI
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
@@ -292,7 +312,9 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 **速记**：batch=1 时 `tok/s ≈ 带宽 / 权重字节`，70B BF16 单卡理论 24、实际 20 左右，算力利用率不到 1%；70B 装不进 80GB，实际要 TP=2，roofline 约 48、实测 30~40。
 
-### 11. When would you choose vLLM vs SGLang vs TensorRT-LLM vs a custom stack?
+### 11. 什么时候你会选 vLLM、SGLang、TensorRT-LLM 还是自研栈？
+
+<!-- EN: When would you choose vLLM vs SGLang vs TensorRT-LLM vs a custom stack? -->
 
 **Asked at**: NVIDIA · Together AI · Tencent · ByteDance
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work · https://outcomeschool.com/blog/how-does-sglang-work · https://outcomeschool.com/blog/how-does-tensorrt-llm-work
@@ -312,7 +334,9 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 **速记**：按**模型迭代频率**选型而非跑分——模型常换选 vLLM/SGLang，模型冻结且要榨干硬件选 TRT-LLM；前缀重的 agent/多轮场景 SGLang 的 RadixAttention 值得 10~30%。
 
-### 12. How would you cut LLM serving cost by 10x? Enumerate every lever and rank them.
+### 12. 你会如何把 LLM 推理服务成本降低 10 倍？列举所有可用手段并排序。
+
+<!-- EN: How would you cut LLM serving cost by 10x? Enumerate every lever and rank them. -->
 
 **Asked at**: Microsoft · Amazon (AWS) · NVIDIA · Cursor (Anysphere)
 **Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
@@ -337,7 +361,9 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 **速记**：先砍需求侧——删无用 token、前缀/语义缓存、小模型路由，再谈供给侧的批处理、FP8、投机解码、硬件；十倍永远是五个 1.3~1.6 相乘，且先按输入/输出 token 拆分账单。
 
-### 13. Your p99 latency doubled after a deploy with no model change. Walk through the diagnosis.
+### 13. 一次没有改动模型的发布之后，你的 p99 延迟翻倍了。讲讲你的排查过程。
+
+<!-- EN: Your p99 latency doubled after a deploy with no model change. Walk through the diagnosis. -->
 
 **Asked at**: OpenAI · Amazon (AWS) · Databricks · Perplexity
 
@@ -359,7 +385,9 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 **速记**：先看 p50——p50 不动、p99 翻倍是排队或长尾队列问题，不是 kernel 变慢；排查顺序是流量形状、batch 组成、前缀缓存命中率、重试风暴、KV 抢占、分词器/模板版本。
 
-### 14. What is chunked prefill, and why does it improve tail latency under mixed traffic?
+### 14. 什么是 chunked prefill，为什么它能在混合流量下改善尾延迟？
+
+<!-- EN: What is chunked prefill, and why does it improve tail latency under mixed traffic? -->
 
 **参考答案**
 
@@ -379,7 +407,9 @@ chunked prefill 把提示切成 `C` 个 token 的块（通常 512–2048），**
 
 **速记**：长 prefill 整块入批会让所有解码请求的 ITL 尖刺到几百毫秒；按固定 token 预算切块混批后 ITL 变平滑，代价是长请求 TTFT 变差、吞吐降几个点，块大小要按解码批量的 2~4 倍调。
 
-### 15. Explain disaggregated prefill/decode serving and when it pays for itself.
+### 15. 解释 prefill/decode 分离式（disaggregated）推理服务，以及它在什么时候才划算。
+
+<!-- EN: Explain disaggregated prefill/decode serving and when it pays for itself. -->
 
 **Asked at**: Moonshot AI · Groq · ByteDance
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
@@ -406,7 +436,9 @@ KV 传输超过节省时它就不划算。算一下：70B、8k 提示 → 2.6 GB
 
 ## Anthropic
 
-### 1. Design a batched inference system where 100 requests take the same time as 1.
+### 1. 设计一个批处理推理系统，让 100 个请求的耗时与 1 个请求相同。
+
+<!-- EN: Design a batched inference system where 100 requests take the same time as 1. -->
 
 **Asked at**: Anthropic
 **Source**: https://outcomeschool.com/blog/continuous-batching-in-llms
@@ -435,7 +467,9 @@ loop:
 
 **速记**：continuous batching + paged KV 才能让 100 个请求≈1 个；只在带宽瓶颈区成立，用 token 预算而非纯条数控批。
 
-### 2. Design the serving stack for a Claude-scale LLM API. Maximise GPU utilisation without wrecking p99 latency.
+### 2. 为 Claude 规模的 LLM API 设计服务栈。在不破坏 p99 延迟的前提下最大化 GPU 利用率。
+
+<!-- EN: Design the serving stack for a Claude-scale LLM API. Maximise GPU utilisation without wrecking p99 latency. -->
 
 **Asked at**: Anthropic
 **Source**: https://outcomeschool.com/blog/llm-inference-optimization
@@ -462,7 +496,9 @@ loop:
 
 ## Meta
 
-### 1. You need to serve a Llama-class 70B+ model to hundreds of millions of assistant users. What does the serving stack look like and where does the money go?
+### 1. 你需要向数亿助手用户服务一个 Llama 级别的 70B+ 模型。服务栈长什么样，钱花在哪里？
+
+<!-- EN: You need to serve a Llama-class 70B+ model to hundreds of millions of assistant users. What does the serving stack look like and where does the money go? -->
 
 **Source**: https://outcomeschool.com/blog/llm-inference-optimization
 
@@ -493,7 +529,9 @@ loop:
 
 ## xAI
 
-### 1. Estimate the KV-cache memory to serve a 70B-class model at 128k context. What do you do when it doesn't fit?
+### 1. 估算在 128k 上下文下服务 70B 级模型所需的 KV cache 显存。当它放不下时你怎么办？
+
+<!-- EN: Estimate the KV-cache memory to serve a 70B-class model at 128k context. What do you do when it doesn't fit? -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
 
@@ -517,7 +555,9 @@ loop:
 
 **速记**：按 KV 头算：320 KiB/token × 128k ≈ 40 GiB/条；装不下时依次上 GQA/MLA → paged+前缀共享 → FP8 KV → 滑窗 → 限流。
 
-### 2. Design a rate limiter for an LLM API where cost scales with tokens, not requests.
+### 2. 为 LLM API 设计一个限流器，其中成本随 token 数而非请求数增长。
+
+<!-- EN: Design a rate limiter for an LLM API where cost scales with tokens, not requests. -->
 
 **参考答案**
 
@@ -545,7 +585,9 @@ b.tokens -= n; global_.tokens -= n
 
 ## Mistral AI
 
-### 1. Estimate the KV-cache memory for serving Mistral 7B, and design the rolling-buffer cache that sliding-window attention enables.
+### 1. 估算服务 Mistral 7B 的 KV cache 显存，并设计滑动窗口注意力所能支持的滚动缓冲区（rolling buffer）缓存。
+
+<!-- EN: Estimate the KV-cache memory for serving Mistral 7B, and design the rolling-buffer cache that sliding-window attention enables. -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/how-does-sliding-window-attention-work
 
@@ -576,7 +618,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **速记**：128 KiB/token；环形 cache 按 W=4096 定额（512 MiB/序列）而非随长度增长；坑是 RoPE 用绝对位置、mask 写成对角带。
 
-### 2. You need to quantize a model for a customer's hardware. How do you choose a scheme, and how do you prove quality hasn't regressed?
+### 2. 你需要针对客户的硬件对模型做量化。如何选择量化方案，以及如何证明质量没有退化？
+
+<!-- EN: You need to quantize a model for a customer's hardware. How do you choose a scheme, and how do you prove quality hasn't regressed? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -610,7 +654,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## DeepSeek
 
-### 1. Sketch how you would serve a 671B-parameter MoE model with low latency under GPU-memory constraints.
+### 1. 描述你会如何在 GPU 显存受限的情况下，以低延迟服务一个 671B 参数的 MoE 模型。
+
+<!-- EN: Sketch how you would serve a 671B-parameter MoE model with low latency under GPU-memory constraints. -->
 
 **Source**: https://outcomeschool.com/blog/llm-inference-optimization
 
@@ -640,7 +686,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## Moonshot AI（Kimi）
 
-### 1. Walk me through why you would disaggregate prefill and decode onto separate machines, as Mooncake does. What does that buy you and what does it cost?
+### 1. 讲讲你为什么像 Mooncake 那样把 prefill 与 decode 拆分到不同机器上。这带来什么，代价又是什么？
+
+<!-- EN: Walk me through why you would disaggregate prefill and decode onto separate machines, as Mooncake does. What does that buy you and what does it cost? -->
 
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
 
@@ -669,7 +717,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **速记**：prefill 算力密集、decode 带宽密集，混批互相拖累；分离后可独立扩缩、消除队头阻塞、做全局 KV 池前缀复用；代价是 KV 传输（长上下文几百 MB）、多一跳与全局调度复杂度。短 prompt 低并发纯亏。
 
-### 2. A chat assistant re-sends a long conversation history on every turn. How do you avoid recomputing all of it, and what are the pitfalls?
+### 2. 一个聊天助手每一轮都会重发很长的对话历史。你如何避免重复计算全部内容，其中有哪些坑？
+
+<!-- EN: A chat assistant re-sends a long conversation history on every turn. How do you avoid recomputing all of it, and what are the pitfalls? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
@@ -705,7 +755,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## Sarvam AI
 
-### 1. How do you deploy a capable assistant on cost-sensitive or on-device hardware without a datacentre GPU? Walk through the efficiency toolkit.
+### 1. 在没有数据中心 GPU 的成本敏感或端侧硬件上，你如何部署一个能力不错的助手？讲讲整套效率工具箱。
+
+<!-- EN: How do you deploy a capable assistant on cost-sensitive or on-device hardware without a datacentre GPU? Walk through the efficiency toolkit. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -737,7 +789,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## Microsoft
 
-### 1. A Copilot chat feature has a p95 budget of 3 seconds to first useful content. Where does the time go, and how do you cut it?
+### 1. 一个 Copilot 聊天功能从请求到出现首个有用内容的 p95 预算是 3 秒。时间花在哪里，你如何压缩？
+
+<!-- EN: A Copilot chat feature has a p95 budget of 3 seconds to first useful content. Where does the time go, and how do you cut it? -->
 
 **Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0 · https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
 
@@ -764,7 +818,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **速记**：先拆 3s 预算——p95 瓶颈通常是"长上下文 prefill + 排队"，不是算力；最大杠杆是前缀缓存命中率与截断检索上下文，其次才是投机解码。
 
-### 2. Estimate the annual serving cost of adding an LLM summary feature for 100 million weekly active users, and how you'd cut it by 10x.
+### 2. 估算为 1 亿周活跃用户新增一个 LLM 摘要功能的年度服务成本，以及你会如何把它降低 10 倍。
+
+<!-- EN: Estimate the annual serving cost of adding an LLM summary feature for 100 million weekly active users, and how you'd cut it by 10x. -->
 
 **Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
 
@@ -801,7 +857,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## Amazon / AWS
 
-### 1. A customer's Bedrock-hosted workload costs too much. Cut inference cost dramatically without unacceptable quality loss.
+### 1. 某客户托管在 Bedrock 上的工作负载成本过高。在不造成不可接受的质量损失的前提下，大幅削减推理成本。
+
+<!-- EN: A customer's Bedrock-hosted workload costs too much. Cut inference cost dramatically without unacceptable quality loss. -->
 
 **Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
 
@@ -837,7 +895,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 ## Apple
 
-### 1. You need to run a ~3B-parameter language model on a phone with tight memory and power budgets. What changes versus serving the same model in a datacenter?
+### 1. 你需要在内存和功耗预算都很紧张的手机上运行一个约 3B 参数的语言模型。相比在数据中心服务同一个模型，需要做哪些改动？
+
+<!-- EN: You need to run a ~3B-parameter language model on a phone with tight memory and power budgets. What changes versus serving the same model in a datacenter? -->
 
 **Source**: https://outcomeschool.com/blog/cloud-vs-on-device-model-deployment · https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -865,7 +925,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **速记**：手机是 batch=1、受带宽/功耗/热限制，还要防 jetsam；权重必须 int4（3B≈1.5–2GB）、词表在 decode 上很贵、真正风险是 KV cache，持续生成会降频。
 
-### 2. Explain post-training quantization versus quantization-aware training. What breaks when you push weights to 2–4 bits, and how do you recover quality?
+### 2. 解释训练后量化（post-training quantization）与量化感知训练（QAT）的区别。把权重压到 2–4 bit 时会出现什么问题，你如何恢复质量？
+
+<!-- EN: Explain post-training quantization versus quantization-aware training. What breaks when you push weights to 2–4 bits, and how do you recover quality? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -889,7 +951,9 @@ allowed = (q_pos >= k_pos) & (q_pos - k_pos < W)   # 对角带状 mask
 
 **速记**：PTQ 靠校准、便宜，8→4 bit 基本无损；QAT 用假量化 + STE 才能到 2–3 bit。崩的原因是离群通道、跨层误差累积、KV cache 更敏感、非标准位宽没有原生 kernel。
 
-### 3. Estimate the KV-cache memory for a 3B on-device model at 4k context, and name the levers that shrink it.
+### 3. 估算一个 3B 端侧模型在 4k 上下文下的 KV cache 显存占用，并说出能压缩它的手段。
+
+<!-- EN: Estimate the KV-cache memory for a 3B on-device model at 4k context, and name the levers that shrink it. -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
 
@@ -923,7 +987,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：`2×层数×kv_heads×head_dim×seq×batch×字节`，典型 3B/28 层/GQA 8×128/fp16/4k ≈ 448 MiB；换 MHA 就是 1.75 GiB——GQA 是端侧 4k 的前提。
 
-### 4. Time-to-first-token for your on-device feature is 1.8 s. Walk me through diagnosing and fixing it.
+### 4. 你的端侧功能首 token 延迟（TTFT）是 1.8 s。讲讲你会如何诊断并修复它。
+
+<!-- EN: Time-to-first-token for your on-device feature is 1.8 s. Walk me through diagnosing and fixing it. -->
 
 **Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0
 
@@ -956,7 +1022,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 ## NVIDIA
 
-### 1. You want to serve a 70B-parameter model on a single 80 GB GPU. Walk me through whether it fits and what single-stream tokens/sec you'd expect.
+### 1. 你想在单张 80 GB GPU 上服务一个 70B 参数模型。讲讲它是否放得下，以及你预期的单流 tokens/sec 是多少。
+
+<!-- EN: You want to serve a 70B-parameter model on a single 80 GB GPU. Walk me through whether it fits and what single-stream tokens/sec you'd expect. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work · https://outcomeschool.com/blog/kv-cache-in-llms
 
@@ -983,7 +1051,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：70B 单卡 80G 只有 INT4 舒服（35G 权重 + 40G KV，约 12 万 token）；decode 是带宽瓶颈，tok/s ≈ 带宽/每步读字节，H100 INT4 实测 40~60 tok/s。
 
-### 2. What does TensorRT / TensorRT-LLM actually do to a model to make it faster, and when will it not help?
+### 2. TensorRT / TensorRT-LLM 究竟对模型做了什么让它变快，以及什么情况下它帮不上忙？
+
+<!-- EN: What does TensorRT / TensorRT-LLM actually do to a model to make it faster, and when will it not help? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
@@ -1007,7 +1077,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：分三层——图优化（融合/常量折叠）、权重（布局 + 量化）、运行时（CUDA Graph、continuous batching、paged KV、定制 attention）；它救不了 shape 超 profile、不支持的算子、瓶颈不在 GPU 的场景。
 
-### 3. Design the parallelism strategy for serving a 405B-parameter dense model. TP, PP, EP: what goes where and why?
+### 3. 为服务一个 405B 参数的稠密模型设计并行策略。TP、PP、EP 各自放在哪里、为什么？
+
+<!-- EN: Design the parallelism strategy for serving a 405B-parameter dense model. TP, PP, EP: what goes where and why? -->
 
 **参考答案**
 
@@ -1033,7 +1105,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 ## Tesla
 
-### 1. The onboard compute budget is fixed. Walk me through quantizing and pruning a vision model without losing recall on small objects.
+### 1. 车载算力预算固定。讲讲你如何量化并剪枝一个视觉模型，同时不丢失小目标的召回率。
+
+<!-- EN: The onboard compute budget is fixed. Walk me through quantizing and pruning a vision model without losing recall on small objects. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -1059,7 +1133,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 ## 字节跳动
 
-### 1. Take an 8x7B model: roughly what share of GPU memory goes to KV cache versus weights? What else occupies memory?
+### 1. 以 8x7B 模型为例：KV cache 和权重各占 GPU 显存的大致比例是多少？还有哪些东西占用显存？
+
+<!-- EN: Take an 8x7B model: roughly what share of GPU memory goes to KV cache versus weights? What else occupies memory? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms
@@ -1086,7 +1162,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：56B 权重 fp16 约 112GB，KV 每 token 约 512KB（8k 上下文≈4GB/条）；还有激活、CUDA graph、碎片和前缀缓存池。MoE 是权重主导，长上下文稠密服务则反过来。
 
-### 2. A prefix cache hits, but the KV blocks have been offloaded to SSD. What is the fetch path, and does it have to go through host memory on the way back to the GPU?
+### 2. 前缀缓存命中了，但 KV block 已被下放到 SSD。取回路径是怎样的，回传到 GPU 的过程中是否必须经过主机内存？
+
+<!-- EN: A prefix cache hits, but the KV blocks have been offloaded to SSD. What is the fetch path, and does it have to go through host memory on the way back to the GPU? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
@@ -1108,7 +1186,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：SSD→页缓存/主机暂存→pinned 缓冲→H2D→HBM，普通 NVMe 必须过主机内存（GPUDirect Storage 才能绕开）；第二次命中才便宜，离载块要被引用计数保护否则抖动。
 
-### 3. What do PagedAttention and continuous batching each solve in vLLM?
+### 3. 在 vLLM 中，PagedAttention 和连续批处理（continuous batching）各自解决了什么问题？
+
+<!-- EN: What do PagedAttention and continuous batching each solve in vLLM? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work
@@ -1132,7 +1212,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：PagedAttention 是**显存分配器**（块表 + 共享，消除 60~80% 碎片），连续批处理是**调度器**（逐 iteration 进出）；两者互为前提，代价是注意力需专用 kernel、短请求 TTFT 抖动。
 
-### 4. Explain speculative decoding. Which models does it not help?
+### 4. 解释投机解码（speculative decoding）。它对哪些模型没有帮助？
+
+<!-- EN: Explain speculative decoding. Which models does it not help? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/speculative-decoding
@@ -1155,7 +1237,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：小模型起草、大模型一次前向并行验证，输出分布严格不变；收益取决于接受率/起草成本比；大 batch 已算力饱和时它反而降吞吐，属单流延迟优化。
 
-### 5. Why does prefill/decode disaggregation raise overall throughput, and when is it worth it for you?
+### 5. 为什么 prefill/decode 分离会提升整体吞吐，以及在什么情况下对你来说值得这么做？
+
+<!-- EN: Why does prefill/decode disaggregation raise overall throughput, and when is it worth it for you? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
@@ -1186,7 +1270,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 ## 腾讯
 
-### 1. What is the core idea behind vLLM? What do PagedAttention and continuous batching each solve?
+### 1. vLLM 的核心思想是什么？PagedAttention 和连续批处理各自解决了什么问题？
+
+<!-- EN: What is the core idea behind vLLM? What do PagedAttention and continuous batching each solve? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work
@@ -1208,7 +1294,9 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 **速记**：核心是把 KV cache 当操作系统内存问题——分页块表消除 60~80% 碎片并支持共享/抢占，连续批处理做逐 iteration 调度；两者互为前提，代价是定制 kernel 与短请求 TTFT 抖动。
 
-### 2. What were the main improvements in FlashAttention v2 over v1?
+### 2. FlashAttention v2 相比 v1 的主要改进有哪些？
+
+<!-- EN: What were the main improvements in FlashAttention v2 over v1? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/decoding-flash-attention
@@ -1231,7 +1319,9 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 **速记**：v2 是 IO 与并行度重写（按序列维并行、Q 外层 K/V 内层免去输出重缩放、warp 各持行切片免跨 warp 通信），数学精确；v3 靠 Hopper 异步 wgmma 与 warp 特化，是另一套机制。
 
-### 3. How do you quality-check training data before it goes into a run?
+### 3. 在训练数据进入训练任务之前，你如何做质量检查？
+
+<!-- EN: How do you quality-check training data before it goes into a run? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/llm-evaluation
@@ -1255,7 +1345,9 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 **速记**：分级闸门——精确/近似去重、启发式过滤、模型打分、与所有评测集的污染检测、PII 与授权、人工抽检；去重通常砍掉三到六成原始网页；注意质量分与长度相关，必须长度归一，否则训出"话多"模型。
 
-### 4. Why do LLMs stream token by token, and what protocol sits underneath?
+### 4. 为什么 LLM 是一个 token 一个 token 地流式输出，底层用的是什么协议？
+
+<!-- EN: Why do LLMs stream token by token, and what protocol sits underneath? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/how-does-token-streaming-work
@@ -1283,7 +1375,9 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 **速记**：模型本来就逐 token 解码，缓冲只会白增延迟，而用户感知看 TTFT；底层多用 SSE（双向/打断才用 WebSocket）；坑在代理缓冲把流合并、按 token 切会切断多字节字符、流内错误无法回 5xx、断连不取消会白烧 GPU。
 
-### 5. Where do you look to cut response latency in an API service?
+### 5. 在一个 API 服务中，你会从哪些方面入手降低响应延迟？
+
+<!-- EN: Where do you look to cut response latency in an API service? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
@@ -1313,7 +1407,9 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 ## 京东
 
-### 1. Which inference optimisation tools have you used (TensorRT, vLLM)? How do they work and what was the experience?
+### 1. 你用过哪些推理优化工具（TensorRT、vLLM）？它们如何工作，你的使用体验如何？
+
+<!-- EN: Which inference optimisation tools have you used (TensorRT, vLLM)? How do they work and what was the experience? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work and https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
@@ -1336,7 +1432,9 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 **速记**：vLLM 赢在 PagedAttention + 连续批处理、落地快；TensorRT-LLM 赢在编译后峰值性能，但每个模型/GPU/精度都要重建；前缀缓存只在 system prompt 真共享时有效。
 
-### 2. How do you handle hundreds of millions of records: cleaning, preprocessing, efficient loading, and the traps you hit?
+### 2. 你如何处理数亿条记录：清洗、预处理、高效加载，以及你踩过的坑？
+
+<!-- EN: How do you handle hundreds of millions of records: cleaning, preprocessing, efficient loading, and the traps you hit? -->
 
 **参考答案**
 
@@ -1355,7 +1453,9 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 **速记**：当成数据工程——Parquet 分区、规则过滤先于模型过滤、MinHash 去重并记录顺序、离线 tokenize 缓存（CPU 先成瓶颈）、分片内 shuffle；原始层不可变，规则改了能重算。
 
-### 3. A model degrades in production, worse quality or higher latency. Walk me through the full diagnosis.
+### 3. 一个模型在生产环境中表现退化，质量变差或延迟升高。讲讲完整的诊断过程。
+
+<!-- EN: A model degrades in production, worse quality or higher latency. Walk me through the full diagnosis. -->
 
 **参考答案**
 
@@ -1386,7 +1486,9 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 ## 美团
 
-### 1. What is the difference between bf16 and fp16, how many bits is each, and how do you choose precision in training?
+### 1. bf16 和 fp16 有什么区别，各自是多少位，你在训练中如何选择精度？
+
+<!-- EN: What is the difference between bf16 and fp16, how many bits is each, and how do you choose precision in training? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -1412,7 +1514,9 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 **速记**：都是 16 位——fp16 是 5 位指数/10 位尾数（精度高但范围窄、必须 loss scaling），bf16 是 8 位指数/7 位尾数（范围同 fp32、免缩放但尾数粗）；有 Ampere 以上就选 bf16，优化器状态永远留 fp32。
 
-### 2. What memory optimisation strategies exist for attention computation?
+### 2. attention 计算有哪些显存优化策略？
+
+<!-- EN: What memory optimisation strategies exist for attention computation? -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms and https://outcomeschool.com/blog/paged-attention-in-llms
 
@@ -1444,7 +1548,9 @@ vLLM 真正赢在三处，按贡献排序：**连续批处理**（跑完的序�
 
 **速记**：训练/prefill 的瓶颈是 n² 分数矩阵（FlashAttention 分块+在线 softmax、激活重算）；解码的瓶颈是 KV cache（GQA/MQA、MLA、PagedAttention、KV 量化、滑窗）；先用 KV 字节公式算容量再决定并发。
 
-### 3. What is the core difference between ZeRO-2 and ZeRO-3 in distributed training?
+### 3. 分布式训练中 ZeRO-2 与 ZeRO-3 的核心区别是什么？
+
+<!-- EN: What is the core difference between ZeRO-2 and ZeRO-3 in distributed training? -->
 
 **参考答案**
 
@@ -1467,7 +1573,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：ZeRO-2 只切优化器状态和梯度，每卡仍持有完整参数；ZeRO-3 连参数一起切，能训单卡放不下的模型，代价是每层前反向各一次 all-gather、通信约 1.5 倍；装得下就选 ZeRO-2。
 
-### 4. Why do LLMs stream token by token, and what protocol is underneath?
+### 4. 为什么 LLM 是一个 token 一个 token 地流式输出，底层用的是什么协议？
+
+<!-- EN: Why do LLMs stream token by token, and what protocol is underneath? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-token-streaming-work
 
@@ -1497,7 +1605,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 ## Groq
 
-### 1. An LPU has no HBM at all, just on-die SRAM. Redo the decode roofline argument for that machine and tell me what changes.
+### 1. LPU 完全没有 HBM，只有片上 SRAM。针对这种机器重新做一遍 decode 的 roofline 分析，并告诉我哪些结论会改变。
+
+<!-- EN: An LPU has no HBM at all, just on-die SRAM. Redo the decode roofline argument for that machine and tell me what changes. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-an-lpu-work
 
@@ -1520,7 +1630,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：去掉 HBM 后 roofline 的约束从"带宽"换成"**容量**"：70B/8bit 必须切到 300+ 卡，瓶颈变成片间互连延迟；单 chip 每 token 约 3 µs 量级（230MB / 80TB/s），batch=1 就接近算力屋顶，所以 batching 早就不划算了。
 
-### 2. A 70B dense model at 8-bit weights, chips with ~230 MB of SRAM each. Walk me through the deployment and the unit economics.
+### 2. 一个 70B 稠密模型、8-bit 权重，每颗芯片约 230 MB SRAM。讲讲部署方案和单位经济性。
+
+<!-- EN: A 70B dense model at 8-bit weights, chips with ~230 MB of SRAM each. Walk me through the deployment and the unit economics. -->
 
 **参考答案**
 
@@ -1538,7 +1650,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：70GB 权重 / 230MB ≈ 300+ 卡只是**容量下限**，KV 几乎没地方放；单 token 约几微秒但实际被流水与互连主导；经济性要按 `卡数 × 卡时` 算，单流很亏，靠共享常驻权重的并发把摊薄做回来——所以卖的是"固定成本下的确定性延迟"，不是批量折扣。
 
-### 3. On a GPU you batch to amortise weight reads. What is the batching calculus on an SRAM-only machine, and how should that change how we price?
+### 3. 在 GPU 上你通过批处理来摊薄权重读取。在纯 SRAM 机器上，批处理的账该怎么算，这又应如何改变我们的定价方式？
+
+<!-- EN: On a GPU you batch to amortise weight reads. What is the batching calculus on an SRAM-only machine, and how should that change how we price? -->
 
 **参考答案**
 
@@ -1561,7 +1675,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：SRAM 机器上权重常驻，batch 摊薄权重读的收益很小，真正的上限是**和权重抢 230MB 的 KV**；所以 batching 是"填满阵列"而非降本杠杆；定价应卖"确定性 p99 的保留流/延迟档"，而不是学 GPU 按 token 批量打折。
 
-### 4. Determinism is the headline claim. What does it actually buy at p99, and why does it matter especially for agentic workloads?
+### 4. 确定性是它最主要的卖点。它在 p99 上究竟带来了什么，以及为什么这对 agentic 工作负载尤其重要？
+
+<!-- EN: Determinism is the headline claim. What does it actually buy at p99, and why does it matter especially for agentic workloads? -->
 
 **参考答案**
 
@@ -1581,7 +1697,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：确定性把 p99 从"随负载涌现"变成"编译期算出来的常数"，p50/p99 只差几个百分点；agent 场景是 10~40 步的链式调用，方差会复利放大、超时就丢掉前面全部工作，所以"固定 step 时间"比峰值吞吐更值钱。
 
-### 5. How would you serve a large mixture-of-experts model on a statically scheduled fabric when expert selection is data-dependent?
+### 5. 当专家选择依赖数据时，你如何在静态调度的互联结构上服务一个大型 MoE 模型？
+
+<!-- EN: How would you serve a large mixture-of-experts model on a statically scheduled fabric when expert selection is data-dependent? -->
 
 **参考答案**
 
@@ -1608,7 +1726,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 ## Together AI
 
-### 1. Design the scheduler for a continuous-batching inference engine.
+### 1. 为一个支持连续批处理的推理引擎设计调度器。
+
+<!-- EN: Design the scheduler for a continuous-batching inference engine. -->
 
 **Source**: https://outcomeschool.com/blog/continuous-batching-in-llms · https://outcomeschool.com/blog/how-does-vllm-work
 
@@ -1636,7 +1756,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：调度器是**每步重算的准入控制器**而非队列：先退役释放 KV、按 token 预算预填、满了就抢占（短的重算/长的换出），并解耦 prefill 与 decode 预算；按请求数准入是最典型的错。
 
-### 2. Explain speculative decoding. When does it help, when does it hurt, and why adapt the speculator to live traffic?
+### 2. 解释投机解码（speculative decoding）。它在什么时候有帮助、什么时候有害，以及为什么要让投机模型适配线上真实流量？
+
+<!-- EN: Explain speculative decoding. When does it help, when does it hurt, and why adapt the speculator to live traffic? -->
 
 **Source**: https://outcomeschool.com/blog/speculative-decoding · https://outcomeschool.com/blog/n-gram-speculation-in-llms
 
@@ -1661,7 +1783,9 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：投机解码是"验证比生成便宜"的赌注：低并发/可预测文本大赚，**高并发算力饱和时会亏**；accept rate 是流量属性，所以要按请求类调 γ、按场景换 drafter（n-gram 抄上下文最适合代码编辑），并用接受率做自动熔断。
 
-### 3. Price a dedicated endpoint: estimate cost per million output tokens for a 70B model, and explain the throughput-latency trade.
+### 3. 为一个专属 endpoint 定价：估算 70B 模型每百万输出 token 的成本，并解释吞吐与延迟之间的权衡。
+
+<!-- EN: Price a dedicated endpoint: estimate cost per million output tokens for a 70B model, and explain the throughput-latency trade. -->
 
 **参考答案**
 
@@ -1691,7 +1815,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Perplexity
 
-### 1. p95 time-to-first-token regressed from 1.2 s to 3 s after a release. Walk me through finding and fixing it.
+### 1. 某次发布后，p95 首 token 延迟（TTFT）从 1.2 s 退化到 3 s。讲讲你会如何定位并修复。
+
+<!-- EN: p95 time-to-first-token regressed from 1.2 s to 3 s after a release. Walk me through finding and fixing it. -->
 
 **Source**: https://www.youtube.com/watch?v=XD8DD4cEHu0
 
@@ -1725,7 +1851,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Cursor
 
-### 1. Serving a custom completion model to millions of DAU: walk me through the inference-cost model and your top three levers.
+### 1. 为数百万 DAU 服务一个自研补全模型：讲讲你的推理成本模型，以及你最有效的三个杠杆。
+
+<!-- EN: Serving a custom completion model to millions of DAU: walk me through the inference-cost model and your top three levers. -->
 
 **Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/how-does-cursor-work
 
@@ -1754,7 +1882,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Glean
 
-### 1. Walk me through the latency budget of a query: query understanding → retrieval → rerank → LLM answer. Where do you spend and where do you cut?
+### 1. 讲讲一次查询的延迟预算：查询理解 → 检索 → 重排 → LLM 回答。你在哪里花时间，又在哪里削减？
+
+<!-- EN: Walk me through the latency budget of a query: query understanding → retrieval → rerank → LLM answer. Where do you spend and where do you cut? -->
 
 **Source**: https://outcomeschool.com/blog/rag-evaluation
 
@@ -1784,7 +1914,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Character.AI
 
-### 1. Our serving cost is dominated by KV cache, not weights. Get it down by an order of magnitude and tell me what you give up.
+### 1. 我们的服务成本主要由 KV cache 而非权重决定。把它降低一个数量级，并告诉我你要放弃什么。
+
+<!-- EN: Our serving cost is dominated by KV cache, not weights. Get it down by an order of magnitude and tell me what you give up. -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-compression
 
@@ -1807,7 +1939,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 **速记**：10 倍不是单点技巧：GQA + KV int8 + 跨用户前缀共享 + 低注意力 KV 淘汰 + 分层卸载叠加；最便宜的大头常是"同角色共享人设前缀 KV"；代价是远期精确召回，用显式记忆块补偿并在会话级探针上衡量。
 
-### 2. Dialogues here average around 180 messages. Design the cache that sits between turns.
+### 2. 这里的对话平均约 180 条消息。设计位于轮次之间的缓存。
+
+<!-- EN: Dialogues here average around 180 messages. Design the cache that sits between turns. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
@@ -1830,7 +1964,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 **速记**：KV 只在单卡上，会话亲和路由是缓存设计的一部分。三层：GPU 内块哈希前缀缓存（人设前缀跨会话共享）、主机内存冷会话、过期重算；关键是失效——摘要或人设更新会悄悄改前缀，必须版本化并进缓存 key。
 
-### 3. You train natively in int8 rather than doing post-training quantization. Defend that.
+### 3. 你选择在 int8 下原生训练，而不是做训练后量化。为这个选择辩护。
+
+<!-- EN: You train natively in int8 rather than doing post-training quantization. Defend that. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-model-quantization-work
 
@@ -1856,7 +1992,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 **速记**：真理由不是"int8 更好"，而是 PTQ 校准集覆盖不了用户生成分布（角色扮演、表情、混写、自造名词），尾部激活被裁；原生 int8 让模型训练中适应可表示范围并与 int8 kernel/KV 协同。代价是训练不稳、跨精度迁移受阻、小模型掉点更多、生态仍以 bf16 为主。
 
-### 4. Estimate what one message costs us to serve, and tell me which lever moves it most.
+### 4. 估算我们服务一条消息的成本，并告诉我哪个杠杆对它的影响最大。
+
+<!-- EN: Estimate what one message costs us to serve, and tell me which lever moves it most. -->
 
 **Source**: https://outcomeschool.com/blog/kv-cache-compression
 
@@ -1893,7 +2031,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## ElevenLabs
 
-### 1. Serving real-time TTS is a different capacity problem from serving a text LLM. Why, and how do you plan capacity?
+### 1. 服务实时 TTS 与服务文本 LLM 是不同的容量问题。为什么，以及你如何做容量规划？
+
+<!-- EN: Serving real-time TTS is a different capacity problem from serving a text LLM. Why, and how do you plan capacity? -->
 
 **参考答案**
 
@@ -1924,7 +2064,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Abridge
 
-### 1. The note should be ready before the clinician leaves the room. Build me the latency budget, and tell me where the money goes.
+### 1. 病历记录应该在临床医生离开诊室之前就准备好。帮我做延迟预算，并告诉我钱花在哪里。
+
+<!-- EN: The note should be ready before the clinician leaves the room. Build me the latency budget, and tell me where the money goes. -->
 
 **参考答案**
 
@@ -1959,7 +2101,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Figure AI
 
-### 1. A colleague wants to move the semantic layer to the cloud so you can use a much bigger model. Walk me through the latency budget.
+### 1. 一位同事想把语义层搬到云上，以便使用大得多的模型。讲讲这个方案的延迟预算。
+
+<!-- EN: A colleague wants to move the semantic layer to the cloud so you can use a much bigger model. Walk me through the latency budget. -->
 
 **参考答案**
 
@@ -2001,7 +2145,9 @@ at 60% realised utilisation             ≈ $3.1 / M output tokens
 
 ## Waymo
 
-### 1. Budget the compute and latency for the onboard stack. What breaks when a model gets bigger?
+### 1. 为车载技术栈做算力和延迟预算。当模型变大时，哪里会先撑不住？
+
+<!-- EN: Budget the compute and latency for the onboard stack. What breaks when a model gets bigger? -->
 
 **参考答案**
 

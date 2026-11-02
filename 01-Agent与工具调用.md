@@ -38,7 +38,9 @@
 
 ## 跨公司通用
 
-### 1. Explain the ReAct pattern and what it solves over chain-of-thought alone.
+### 1. 解释 ReAct 模式，以及它相比单纯思维链（CoT）解决了什么问题。
+
+<!-- EN: Explain the ReAct pattern and what it solves over chain-of-thought alone. -->
 
 **Asked at**: ByteDance · Tencent · Meituan
 **Source**: https://outcomeschool.com/blog/react-agent
@@ -62,7 +64,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：ReAct 的本质是"用工具返回的真实观察修正下一轮推理"，解决 CoT 闭门造车 + 错误不可恢复；代价是 token、延迟，以及你必须自己写循环控制。
 
-### 2. How do you handle tool-call errors, timeouts and retries in an agentic loop?
+### 2. 在 agent 循环中，你如何处理工具调用错误、超时和重试？
+
+<!-- EN: How do you handle tool-call errors, timeouts and retries in an agentic loop? -->
 
 **Asked at**: OpenAI · Cognition
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
@@ -86,7 +90,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：关键不是"要不要重试"，而是**先分类**——超时/429/5xx 退避重试，参数错/无权限绝不重试；错误要回灌给模型而不是抛异常终止。
 
-### 3. What is the difference between structured output and function calling?
+### 3. 结构化输出（structured output）和函数调用（function calling）有什么区别？
+
+<!-- EN: What is the difference between structured output and function calling? -->
 
 **Asked at**: Mistral AI · Apple · JD.com · Meituan · Alibaba
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
@@ -106,7 +112,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：结构化输出是"答案格式约束"，函数调用是"多轮协议"；模型从不执行代码，只生成调用意图，执行和鉴权都在客户端。
 
-### 4. What is MCP (Model Context Protocol) and how does it differ from traditional function calling?
+### 4. 什么是 MCP（Model Context Protocol）？它与传统的函数调用有何不同？
+
+<!-- EN: What is MCP (Model Context Protocol) and how does it differ from traditional function calling? -->
 
 **Asked at**: Microsoft · ByteDance · JD.com · Meituan · Alibaba
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
@@ -128,7 +136,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：MCP 的核心价值不是"也能调工具"，而是**工具与 agent 框架解耦 + 运行时动态发现 + 标准传输层**；代价是多了一跳连接管理。
 
-### 5. How many tools is too many? How do you design tool schemas an LLM can actually use correctly?
+### 5. 工具多到什么程度算太多？你如何设计 LLM 真正能正确使用的工具 schema？
+
+<!-- EN: How many tools is too many? How do you design tool schemas an LLM can actually use correctly? -->
 
 **Asked at**: Anthropic · Cognition
 **Source**: 视频 https://www.youtube.com/watch?v=lnfWvX66FUk
@@ -149,7 +159,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：经验阈值 20~30 个；关键是分组前缀、"什么时候别用"的描述、枚举化参数、返回值瘦身，以及**按阶段遮挡而非移除工具**（移除会让整个 prompt cache 失效）。
 
-### 6. How does multi-agent orchestration work, and when does it break down?
+### 6. 多 agent 编排是如何工作的？它在什么情况下会失效？
+
+<!-- EN: How does multi-agent orchestration work, and when does it break down? -->
 
 **Asked at**: Cognition · ByteDance · Meituan · JD.com · Alibaba
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
@@ -179,7 +191,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：多 agent 崩在五处——无限递归委派、上下文分叉无人仲裁、重复劳动、丢失全局目标、无人对最终答案负责；另外要敢说"很多场景单 agent 更划算"。
 
-### 7. Design memory for a long-running agent: what do you store, where, and how do you retrieve it?
+### 7. 为一个长期运行的 agent 设计记忆：你存什么、存在哪里、如何检索？
+
+<!-- EN: Design memory for a long-running agent: what do you store, where, and how do you retrieve it? -->
 
 **Asked at**: Anthropic · JD.com · ByteDance
 **Source**: https://outcomeschool.com/blog/ai-agent-memory
@@ -203,7 +217,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：按**生命周期与可信度**分层，不是按"聊天记录"；三条铁律——只写已验证事实、每条带来源与有效期、过期要主动遗忘。
 
-### 8. How does an agent decide when to call a tool versus answer from its own knowledge?
+### 8. agent 如何判断何时该调用工具、何时该凭自身知识作答？
+
+<!-- EN: How does an agent decide when to call a tool versus answer from its own knowledge? -->
 
 **参考答案**
 
@@ -217,7 +233,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：prompt 策略 + 小模型意图路由 + **确定性后校验**（答案里的数字/日期/实体必须能追溯到某次工具返回），三者叠加才可靠。
 
-### 9. What makes an agent loop terminate correctly? How do you bound cost and steps?
+### 9. 什么能让 agent 循环正确终止？你如何限制成本和步数？
+
+<!-- EN: What makes an agent loop terminate correctly? How do you bound cost and steps? -->
 
 **Asked at**: ByteDance · Tencent · Meituan
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
@@ -243,7 +261,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：五类终止条件缺一不可；终止必须返回**结构化原因**；预算要分层；熔断不等于重试；空转检测（同工具同参数）最易漏。
 
-### 10. How do you make an agent's actions reversible, or at least auditable, in a production system?
+### 10. 在生产系统中，你如何让 agent 的动作可回滚，或至少可审计？
+
+<!-- EN: How do you make an agent's actions reversible, or at least auditable, in a production system? -->
 
 **Asked at**: Palantir · JD.com · Alibaba
 
@@ -261,7 +281,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：先纠正前提——多数动作不可逆；三层是事前限权（风险分级/HITL/dry-run/限额）、事中幂等+先声明后执行+写后回读、事后补偿+含"为什么"的审计+可回放 trace。
 
-### 11. Design human-in-the-loop approval for an agent that takes consequential actions.
+### 11. 为一个会执行有后果动作的 agent 设计 human-in-the-loop 审批流程。
+
+<!-- EN: Design human-in-the-loop approval for an agent that takes consequential actions. -->
 
 **Asked at**: OpenAI · Palantir · Alibaba · Tencent
 
@@ -279,7 +301,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 **速记**：五件事——触发策略、interrupt+Checkpointer 挂起、恢复时**重新校验数据版本**、审批界面必须给影响面与证据、超时默认拒绝（fail-closed）。
 
-### 12. Your agent drifts after a long run and confidently works on the wrong thing. Diagnose it.
+### 12. 你的 agent 在长时间运行后发生漂移，自信地在做错误的事情。请诊断原因。
+
+<!-- EN: Your agent drifts after a long run and confidently works on the wrong thing. Diagnose it. -->
 
 **Asked at**: Cognition
 
@@ -305,7 +329,9 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 ## Anthropic
 
-### 1. What matters more for an agentic coding tool like Claude Code: the model or the harness? Design the loop.
+### 1. 对 Claude Code 这类 agentic 编码工具，模型和 harness 哪个更重要？请设计这个循环。
+
+<!-- EN: What matters more for an agentic coding tool like Claude Code: the model or the harness? Design the loop. -->
 
 **Asked at**: Anthropic
 **Source**: https://outcomeschool.com/blog/how-does-claude-code-work and https://outcomeschool.com/blog/harness-engineering-in-ai
@@ -336,7 +362,9 @@ harness 的职责是让模型待在**短而高信号的上下文**里；大多�
 
 **速记**：模型决定上限，harness 决定拿到多少；核心是上下文装配 + 结果整形（必带 exit code/stderr）+ 循环检测 + 权限沙箱。
 
-### 2. Design the tool surface for a coding agent: which tools exist, what their schemas look like, and how results come back.
+### 2. 为编码 agent 设计工具面：有哪些工具、它们的 schema 长什么样、结果如何返回。
+
+<!-- EN: Design the tool surface for a coding agent: which tools exist, what their schemas look like, and how results come back. -->
 
 **Asked at**: Anthropic
 **Source**: https://outcomeschool.com/blog/how-does-claude-code-work
@@ -364,7 +392,9 @@ harness 的职责是让模型待在**短而高信号的上下文**里；大多�
 
 ## OpenAI
 
-### 1. You are building a production agent that calls tools (function calling). What makes the loop reliable enough to ship?
+### 1. 你在构建一个会调用工具（function calling）的生产级 agent。是什么让这个循环可靠到可以上线？
+
+<!-- EN: You are building a production agent that calls tools (function calling). What makes the loop reliable enough to ship? -->
 
 **Asked at**: OpenAI
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms and https://outcomeschool.com/blog/ai-agent-loop
@@ -403,7 +433,9 @@ for step in range(MAX_STEPS):
 
 ## Meta
 
-### 1. You're dropped into an unfamiliar multi-file codebase with a failing behaviour and an LLM assistant available. Walk me through how you'd fix it.
+### 1. 你被扔进一个陌生的多文件代码库，有一个出问题的行为，并且有一个 LLM 助手可用。讲讲你会如何修复它。
+
+<!-- EN: You're dropped into an unfamiliar multi-file codebase with a failing behaviour and an LLM assistant available. Walk me through how you'd fix it. -->
 
 **参考答案**
 
@@ -425,7 +457,9 @@ for step in range(MAX_STEPS):
 
 ## Mistral AI
 
-### 1. How does function calling actually work with an LLM, and how do you make it reliable enough for production agents?
+### 1. 函数调用（function calling）与 LLM 到底是如何协作的？你如何让它可靠到足以支撑生产级 agent？
+
+<!-- EN: How does function calling actually work with an LLM, and how do you make it reliable enough for production agents? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -451,7 +485,9 @@ for step in range(MAX_STEPS):
 
 ## Cohere
 
-### 1. Design an agent that automates an enterprise workflow, say, drafting RFP responses from internal documents and a CRM. What does “enter-prise-grade” add?
+### 1. 设计一个自动化企业工作流的 agent，比如根据内部文档和 CRM 起草 RFP 回复。“enterprise-grade”（企业级）还额外要求什么？
+
+<!-- EN: Design an agent that automates an enterprise workflow, say, drafting RFP responses from internal documents and a CRM. What does “enter-prise-grade” add? -->
 
 **参考答案**
 
@@ -480,7 +516,9 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 ## 智谱 AI（GLM）
 
-### 1. AutoGLM and CogAgent operate real GUIs from screenshots over tens of steps. Design the agent: perception, action space, and error recovery for a 50-step task.
+### 1. AutoGLM 和 CogAgent 能通过截图在数十步内操作真实 GUI。请设计这个 agent：感知、动作空间，以及 50 步任务中的错误恢复。
+
+<!-- EN: AutoGLM and CogAgent operate real GUIs from screenshots over tens of steps. Design the agent: perception, action space, and error recovery for a 50-step task. -->
 
 **Source**: https://outcomeschool.com/blog/how-do-computer-use-agents-work
 
@@ -514,7 +552,9 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 ## Amazon / AWS
 
-### 1. Design an agent that operates a web browser to complete multi-step tasks. How do you make it reliable enough to ship?
+### 1. 设计一个操作 Web 浏览器完成多步任务的 agent。你如何让它可靠到可以上线？
+
+<!-- EN: Design an agent that operates a web browser to complete multi-step tasks. How do you make it reliable enough to ship? -->
 
 **Source**: https://outcomeschool.com/blog/how-do-computer-use-agents-work
 
@@ -547,7 +587,9 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 ## Apple
 
-### 1. Your on-device model must emit valid, schema-conforming tool calls. How do you guarantee validity rather than hope for it?
+### 1. 你的端侧模型必须输出合法的、符合 schema 的工具调用。你如何保证其合法性，而不是寄希望于它？
+
+<!-- EN: Your on-device model must emit valid, schema-conforming tool calls. How do you guarantee validity rather than hope for it? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -577,7 +619,9 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 ## 字节跳动
 
-### 1. Where are the boundaries between Agent, Workflow, Orchestrator and Harness?
+### 1. Agent、Workflow、Orchestrator 和 Harness 之间的边界在哪里？
+
+<!-- EN: Where are the boundaries between Agent, Workflow, Orchestrator and Harness? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/ai-orchestration
@@ -599,7 +643,9 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 **速记**：workflow 是**你写的**控制流（可审计、覆盖约 80% 生产任务），agent 是**模型写的**控制流；orchestrator 是跑控制流的运行时，harness 是单次调用的脚手架（提示拼装、工具 schema、压缩、权限、评测）。
 
-### 2. How do Function Calling, Tool, MCP and Skill differ? Why does a Skill save tokens, and what risk does that bring?
+### 2. Function Calling、Tool、MCP 和 Skill 有何区别？为什么 Skill 能省 token，又带来什么风险？
+
+<!-- EN: How do Function Calling, Tool, MCP and Skill differ? Why does a Skill save tokens, and what risk does that bring? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
@@ -623,7 +669,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：tool 是能力、FC 是调用协议、MCP 是外部工具的传输标准、Skill 是按需加载的"流程包"；Skill 省 token 因为描述常在而正文按需读，风险是惰性校验、skill 文件里的注入和被静默执行。
 
-### 3. How do you compress context as it approaches the window limit, and what must never be left to a summarising model?
+### 3. 当上下文接近窗口上限时，你如何压缩它？哪些内容绝不能交给摘要模型处理？
+
+<!-- EN: How do you compress context as it approaches the window limit, and what must never be left to a summarising model? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/how-does-context-compaction-work
@@ -646,7 +694,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：分层压缩——系统提示/工具 schema/用户原话逐字保留，旧工具输出换成"一行结果+引用"，旧对话压成含决策与约束的结构化摘要；ID、路径、数字、权限、原始指令**绝不交给模型改写**，且必须从原文而非摘要再摘要。
 
-### 4. A production agent keeps calling tools but never returns. How do you debug it? How do you defend against reasoning-chain error propagation, tool hallucination, broken JSON and infinite loops?
+### 4. 一个生产级 agent 不断调用工具却始终不返回。你如何调试？如何防范推理链错误传播、工具幻觉、JSON 破损和死循环？
+
+<!-- EN: A production agent keeps calling tools but never returns. How do you debug it? How do you defend against reasoning-chain error propagation, tool hallucination, broken JSON and infinite loops? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
@@ -673,7 +723,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：从 trace 而非 prompt 调试，`(工具名, 参数)` 哈希连续相同即卡死（约七成"不返回"）；手段是硬预算 + 每步 schema 校验 + 错误作为观察回灌 + 无进展计数；幻觉链靠"结论必须挂到某条工具观察 ID"。
 
-### 5. How do multiple agents communicate, and how do you stop two of them editing the same file?
+### 5. 多个 agent 之间如何通信？你如何阻止两个 agent 同时编辑同一个文件？
+
+<!-- EN: How do multiple agents communicate, and how do you stop two of them editing the same file? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
@@ -701,7 +753,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：靠"共享产物 + 短消息"而非自由对话；文件按**所有者划分**，非所有者只能发请求，用文件级锁或版本 CAS 防丢失更新，写入用"临时文件+原子改名"；接口必须先定稿为不可变产物。
 
-### 6. How do you define and measure a hallucination rate? How was that improvement number actually computed, and how do you tell stale content from hallucination?
+### 6. 你如何定义和度量幻觉率？那个改进数字究竟是怎么算出来的？你如何区分过时内容与幻觉？
+
+<!-- EN: How do you define and measure a hallucination rate? How was that improvement number actually computed, and how do you tell stale content from hallucination? -->
 
 **Asked at**: ByteDance
 **Source**: https://outcomeschool.com/blog/llm-evaluation
@@ -732,7 +786,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 ## 腾讯
 
-### 1. Claude Code already exists, so why build your own coding agent? What differs, and how do you design layered context?
+### 1. Claude Code 已经存在，为什么还要自研编码 agent？差异在哪？你如何设计分层上下文？
+
+<!-- EN: Claude Code already exists, so why build your own coding agent? What differs, and how do you design layered context? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/how-does-claude-code-work
@@ -764,7 +820,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：自研的理由是**私有上下文与私有执行环境**（代码不出域、内部工具链、工单/CI 集成、成本与模型选择、自有评测）；真正的差异在检索、验证与权限策略，循环本身是同质化能力；上下文分层里第 1 层要保持稳定以吃满前缀缓存。
 
-### 2. How do you design an agent's assembly and execution chain, and how does it degrade gracefully?
+### 2. 你如何设计 agent 的组装与执行链路？它如何优雅降级？
+
+<!-- EN: How do you design an agent's assembly and execution chain, and how does it degrade gracefully? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/ai-orchestration
@@ -796,7 +854,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：把降级当一等信息设计：每个环节先写更便宜的兜底再写顺利路径；阶梯是"检索挂→直答并声明、主模型超时→小模型短提示、工具失败→剔除继续、预算耗尽→总结已查/未查、全挂→模板+人工"；降级必须显式标记并做故障注入测试。
 
-### 3. A sub-agent discovers it needs an extra task mid-execution. How should that task flow and get approved?
+### 3. 一个 sub-agent 在执行过程中发现还需要额外任务。该任务应如何流转并获得审批？
+
+<!-- EN: A sub-agent discovers it needs an extra task mid-execution. How should that task flow and get approved? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/ai-subagents
@@ -826,7 +886,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：子代理**只能提议不能自行扩权**——发结构化请求（原因/范围/是否阻塞/预估成本）后暂停或返回部分结果；由编排器按原计划校验、批准/拒绝/合并并登记父子关系；只有编排器能建任务且要限深度，写操作必须显式批准。
 
-### 4. How do you constrain an agent's permissions to avoid unauthorised actions, especially anything touching real money?
+### 4. 你如何约束 agent 的权限以避免未授权操作，尤其是涉及真实资金的操作？
+
+<!-- EN: How do you constrain an agent's permissions to avoid unauthorised actions, especially anything touching real money? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
@@ -854,7 +916,9 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 **速记**：四层叠加：能力（只读默认、最小 scope、钱相关 API 不进工具集）→ 策略（白名单）→ 审批（金额阈值 + 展示影响面）→ 执行（幂等键、dry-run、限额）→ 审计；金额必须两阶段提交、限额在服务端强制，假设模型可被说服而服务不会被说服。
 
-### 5. Walk through ReAct: workflow, pros and cons, and how the loop avoids infinite or premature exit.
+### 5. 讲一遍 ReAct：工作流、优缺点，以及这个循环如何避免死循环或过早退出。
+
+<!-- EN: Walk through ReAct: workflow, pros and cons, and how the loop avoids infinite or premature exit. -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/react-agent
@@ -888,7 +952,9 @@ ReAct 交替进行**思考**（为什么动手）、**动作**（工具 + 参数
 
 **速记**：ReAct 的代价是 token/延迟翻数倍且错误会累积；防死循环靠步数上限、`(工具,参数)` 重复检测、无进展计数与终止型错误不重试；防过早退出靠显式完成条件 + 回答前的自检（是否引用观察、子问题是否覆盖），并允许"不知道"作为合法终点。
 
-### 6. How do you govern token cost: monitoring, attribution, quotas or caching?
+### 6. 你如何治理 token 成本：监控、归因、配额还是缓存？
+
+<!-- EN: How do you govern token cost: monitoring, attribution, quotas or caching? -->
 
 **Asked at**: Tencent
 **Source**: https://outcomeschool.com/blog/how-does-semantic-caching-work
@@ -918,7 +984,9 @@ ReAct 交替进行**思考**（为什么动手）、**动作**（工具 + 参数
 
 ## 阿里巴巴（淘天 / 阿里云）
 
-### 1. Where is the line between the agent loop and the harness, and how do you early-stop a long-running task?
+### 1. agent 循环与 harness 的分界线在哪？你如何对长任务做提前终止（early-stop）？
+
+<!-- EN: Where is the line between the agent loop and the harness, and how do you early-stop a long-running task? -->
 
 **Source**: https://outcomeschool.com/blog/ai-agent-loop and https://outcomeschool.com/blog/harness-engineering-in-ai
 
@@ -942,7 +1010,9 @@ ReAct 交替进行**思考**（为什么动手）、**动作**（工具 + 参数
 
 **速记**：分工判据是"需要知道模型说了什么=loop，需要知道系统状态（成本/时间/权限/进度）=harness"；停止逻辑必须是确定性代码而非提示词。停止要分层（预算、无进展、语义停滞、质量门、外部取消），并返回结构化原因 + 半成品，且可断点续跑。
 
-### 2. What is the relationship between MCP and A2A, and how should a multi-agent communication protocol be designed?
+### 2. MCP 与 A2A 是什么关系？多 agent 通信协议应如何设计？
+
+<!-- EN: What is the relationship between MCP and A2A, and how should a multi-agent communication protocol be designed? -->
 
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
 
@@ -972,7 +1042,9 @@ agent 用 MCP 去**做事**，用 A2A 去**让另一个 agent 做事**。两者�
 
 **速记**：MCP 是纵向的"agent→工具/数据"，A2A 是横向的"agent→agent"，两者互补。协议设计要点是委托身份（代表谁）、带 input-required 的任务状态机、异步可恢复 + 幂等、结构化消息体、独立于传输层的错误分类、以及跨跳 trace id。
 
-### 3. The model returns a function call with malformed arguments. What do you do?
+### 3. 模型返回了一个参数格式错误的函数调用。你怎么办？
+
+<!-- EN: The model returns a function call with malformed arguments. What do you do? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -990,7 +1062,9 @@ agent 用 MCP 去**做事**，用 A2A 去**让另一个 agent 做事**。两者�
 
 **速记**：先 schema 校验，只做语法级修复（去围栏、引号、类型转换）且必须记日志；把精确错误回灌给模型重试，最多两次；根治靠约束解码 + 枚举化 + 更少必填字段。关键区分：格式错误靠校验，"格式正确但语义错"只能靠前置条件 + dry-run。
 
-### 4. What does multi-agent coordination buy over a single agent, and how does the lead agent pick a sub-agent dynamically?
+### 4. 相比单 agent，多 agent 协作带来了什么？lead agent 如何动态选择 sub-agent？
+
+<!-- EN: What does multi-agent coordination buy over a single agent, and how does the lead agent pick a sub-agent dynamically? -->
 
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
 
@@ -1018,7 +1092,9 @@ agent 用 MCP 去**做事**，用 A2A 去**让另一个 agent 做事**。两者�
 
 **速记**：多 agent 真正买到的是**上下文隔离**（其次并行），代价是 2~5 倍 token 和不可复现性，很多场景单 agent 更划算。动态选人：把子 agent 暴露成带"何时别用"描述的工具、按能力/权限先确定性过滤、只传任务简报不传全部历史、强制结构化回报含"我做不到什么"、加深度和调用预算。
 
-### 5. What dimensions does an agent evaluation need, and how do you measure planning ability versus hallucination rate?
+### 5. agent 评测需要哪些维度？你如何分别度量规划能力和幻觉率？
+
+<!-- EN: What dimensions does an agent evaluation need, and how do you measure planning ability versus hallucination rate? -->
 
 **Source**: https://outcomeschool.com/blog/ai-agent-evaluation
 
@@ -1049,7 +1125,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 ## 滴滴
 
-### 1. Design a smart driver dispatch assistant: order in, accept-or-skip recommendation with reasons out. What is the architecture, and what factors drive the decision?
+### 1. 设计一个智能司机派单助手：订单进来，输出带理由的接单或跳过建议。架构是什么？哪些因素驱动决策？
+
+<!-- EN: Design a smart driver dispatch assistant: order in, accept-or-skip recommendation with reasons out. What is the architecture, and what factors drive the decision? -->
 
 **参考答案**
 
@@ -1073,7 +1151,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 **速记**：决策用小模型（GBDT/深度模型算 P(accept) × 期望净收益），LLM 只负责把特征向量翻译成理由和答疑——亚秒延迟和校准概率都容不下 LLM 在决策环里。关键因子：每公里净收入、接驾 ETA、目的地是否顺路、司机历史偏好、激励进度。指标必须看对照组和司机改判率。
 
-### 2. In a stack-trace-to-code-location pipeline, is the LLM interaction single-turn or multi-turn? Why?
+### 2. 在从 stack trace 定位到代码位置的 pipeline 中，与 LLM 的交互是单轮还是多轮？为什么？
+
+<!-- EN: In a stack-trace-to-code-location pipeline, is the LLM interaction single-turn or multi-turn? Why? -->
 
 **参考答案**
 
@@ -1095,7 +1175,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 **速记**：必须多轮，但形式是工具驱动的搜索循环而非聊天——仓库塞不进上下文，定位本质是"看到结果再决定查什么"。turn 0 用符号索引确定性地把帧解析成 file:line，之后限 5~8 跳并维护候选假设表；单轮只适用于已知文件要修复建议，或错误签名匹配。
 
-### 3. What do you do when the agent hallucinates and points at the wrong code, or when a file exceeds the context window?
+### 3. 当 agent 产生幻觉、指向了错误的代码，或者文件超出上下文窗口时，你怎么办？
+
+<!-- EN: What do you do when the agent hallucinates and points at the wrong code, or when a file exceeds the context window? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-context-compaction-work
 
@@ -1123,7 +1205,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 **速记**：幻觉定位靠 harness 校验——路径存在、引用片段匹配、符号能在索引里解析，不通过就丢弃并强制重新检索（"无证据不下结论"要写在代码里而不是提示词里）。超大文件绝不整篇塞：先用 AST 取符号、grep 带上下文、分层摘要、全文落 artifact 只留路径，压缩时先丢旧 tool 输出且标识符逐字保留。
 
-### 4. How do you measure a diagnostic agent's accuracy, and can that validation loop be automated?
+### 4. 你如何度量诊断 agent 的准确率？这个验证循环可以自动化吗？
+
+<!-- EN: How do you measure a diagnostic agent's accuracy, and can that validation loop be automated? -->
 
 **Source**: https://outcomeschool.com/blog/ai-agent-evaluation
 
@@ -1157,7 +1241,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 ## 京东
 
-### 1. How does function calling work, and how does the model know which tool to call?
+### 1. 函数调用是如何工作的？模型如何知道该调用哪个工具？
+
+<!-- EN: How does function calling work, and how does the model know which tool to call? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -1173,7 +1259,9 @@ agent 评测是一个矩阵，只看端到端成功率得不到任何可行动�
 
 **速记**：工具定义序列化进 prompt，模型输出调用意图、客户端执行；语法靠约束解码，选对工具靠描述+示例。高频失败是相似工具误选、必填参数漏填、ID 幻觉——小工具集 + 校验后把错误回灌。
 
-### 2. How do MCP and Skills differ, and how do you think about prompts, MCP, skills and subagents?
+### 2. MCP 与 Skills 有何区别？你如何看待 prompt、MCP、skill 和 subagent 之间的关系？
+
+<!-- EN: How do MCP and Skills differ, and how do you think about prompts, MCP, skills and subagents? -->
 
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
 
@@ -1196,7 +1284,9 @@ MCP 解的是 **N×M 集成**（N 个客户端、M 个系统），并统一发�
 
 **速记**：四层不同——prompt 管当下指令、MCP 是接外部系统的协议（解 N×M）、skill 是可复用流程包（按需加载省 context）、subagent 是独立上下文；别把业务逻辑塞进巨型 prompt。
 
-### 3. How do you constrain agent permissions to avoid unauthorised actions, especially around money?
+### 3. 你如何约束 agent 权限以避免未授权操作，尤其是涉及资金的操作？
+
+<!-- EN: How do you constrain agent permissions to avoid unauthorised actions, especially around money? -->
 
 **参考答案**
 
@@ -1218,7 +1308,9 @@ MCP 解的是 **N×M 集成**（N 个客户端、M 个系统），并统一发�
 
 **速记**：模型提议、平台裁决——运行时签发的能力令牌、两阶段 prepare/commit、代码里的硬限额、枚举白名单、幂等键；绝不把限额写进 system prompt，可逆与不可逆动作拆成两个工具。
 
-### 4. What do you do when multiple agents disagree or play conflicting roles?
+### 4. 当多个 agent 意见不一致或扮演相互冲突的角色时，你怎么办？
+
+<!-- EN: What do you do when multiple agents disagree or play conflicting roles? -->
 
 **参考答案**
 
@@ -1241,7 +1333,9 @@ MCP 解的是 **N×M 集成**（N 个客户端、M 个系统），并统一发�
 
 **速记**：先定仲裁机制——领域归属、裁判 agent（看原始证据不看结论）、投票、升级人工、约束合并；限制轮数且每轮要新证据；矛盾要显式暴露，不能悄悄平均掉。
 
-### 5. Why Spring AI over LangChain4j, and how do you adapt agent frameworks on the Java side?
+### 5. 为什么选 Spring AI 而不是 LangChain4j？你如何在 Java 侧适配 agent 框架？
+
+<!-- EN: Why Spring AI over LangChain4j, and how do you adapt agent frameworks on the Java side? -->
 
 **参考答案**
 
@@ -1266,7 +1360,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## 美团
 
-### 1. What is your understanding of function calling, and how do you train tool-use ability? What goes in the training set and where does the data come from?
+### 1. 你对函数调用的理解是什么？你如何训练工具使用能力？训练集里放什么、数据从哪来？
+
+<!-- EN: What is your understanding of function calling, and how do you train tool-use ability? What goes in the training set and where does the data come from? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -1291,7 +1387,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：函数调用是协议不是执行——分别训"要不要用/用哪个/参数对不对"；配比约单工具 40%、易混工具 20%、多轮工具结果 15%、无需工具 10%、错误恢复 10%、对抗 5%；合成样本必须跑通验证。
 
-### 2. Two tools can satisfy one query. How do you design the training data for that?
+### 2. 两个工具都能满足同一个查询。你如何为此设计训练数据？
+
+<!-- EN: Two tools can satisfy one query. How do you design the training data for that? -->
 
 **参考答案**
 
@@ -1315,7 +1413,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：先改规格让工具不重叠，再定一条明文策略（最便宜/最安全/最具体/反问），然后才造数据；关键是同一 query 打乱工具顺序消除位置偏好，用近似对逼出区分特征，并测翻转率和每工具 precision/recall。
 
-### 3. How does a lead agent dynamically pick a sub-agent, and should sub-agents run serially or in parallel?
+### 3. lead agent 如何动态选择 sub-agent？sub-agent 应该串行还是并行执行？
+
+<!-- EN: How does a lead agent dynamically pick a sub-agent, and should sub-agents run serially or in parallel? -->
 
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
 
@@ -1337,7 +1437,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：选择靠能力卡检索（name/when_to_use/契约/成本），不是把所有 agent 塞进 prompt；独立只读任务并行、有依赖或共享写入则串行；交接传可序列化任务对象，结果按验收标准校验。
 
-### 4. Why should agent capabilities be disclosed progressively?
+### 4. 为什么 agent 的能力应当逐步披露？
+
+<!-- EN: Why should agent capabilities be disclosed progressively? -->
 
 **参考答案**
 
@@ -1358,7 +1460,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：工具越多选错越多（相似工具在同一 softmax 竞争）、每个 schema 每轮都吃 context、且加载即拥有权限；所以分阶段披露——常驻核心 + `discover_capabilities` 按需返回少量工具，权限检查放在发现环节。
 
-### 5. What are OpenClaw and Manus, why did they take off, and how do they differ?
+### 5. OpenClaw 和 Manus 是什么？它们为什么火起来？两者有何不同？
+
+<!-- EN: What are OpenClaw and Manus, why did they take off, and how do they differ? -->
 
 **Source**: https://outcomeschool.com/blog/harness-engineering-in-ai
 
@@ -1382,7 +1486,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：两者都是通用 agent harness——模型是商品，产品是循环：长任务、真实 VM 环境、状态持久化、可观测可中断。OpenClaw 偏开源自托管+消息入口，Manus 偏云沙箱+托管产品化；难点是沙箱隔离、凭据管理、可恢复性。
 
-### 6. Beyond tool descriptions, how do you stop an agent calling the wrong tool?
+### 6. 除了工具描述之外，你还能如何防止 agent 调用错误的工具？
+
+<!-- EN: Beyond tool descriptions, how do you stop an agent calling the wrong tool? -->
 
 **参考答案**
 
@@ -1408,7 +1514,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Cursor
 
-### 1. Design the harness for an agent that makes multi-file changes from a natural-language task. How do you keep it from wrecking a codebase?
+### 1. 为一个根据自然语言任务做多文件修改的 agent 设计 harness。你如何防止它毁掉代码库？
+
+<!-- EN: Design the harness for an agent that makes multi-file changes from a natural-language task. How do you keep it from wrecking a codebase? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-cursor-work · https://outcomeschool.com/blog/harness-engineering-in-ai
 
@@ -1431,7 +1539,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：harness = 计划→带锚点编辑→跑仓库自带 lint/test→整体事务提交；铁律是「没读过不许改」「锚点不唯一就拒绝」「失败不许宣称完成」，再加可一键撤销的 checkpoint。
 
-### 2. Design an agentic AI system that can autonomously adapt to new tasks.
+### 2. 设计一个能够自主适应新任务的 agentic AI 系统。
+
+<!-- EN: Design an agentic AI system that can autonomously adapt to new tasks. -->
 
 **参考答案**
 
@@ -1454,7 +1564,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Cognition（Devin / Windsurf）
 
-### 1. You have eight hours to build a coding agent from scratch. Describe what you build and, more importantly, what you cut.
+### 1. 你有八小时从零构建一个编码 agent。描述你会构建什么，更重要的是，你会砍掉什么。
+
+<!-- EN: You have eight hours to build a coding agent from scratch. Describe what you build and, more importantly, what you cut. -->
 
 **参考答案**
 
@@ -1483,7 +1595,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：8 小时只做「一个循环 + 五个工具 + 明确终止条件 + 可回放 trace」；砍掉多 agent、微调、向量索引、UI。唯一不能砍的是「跑测试并回灌失败」的验证环。
 
-### 2. Cognition published an argument against multi-agent systems and later published what actually works. Reconcile those two positions.
+### 2. Cognition 曾发表过一篇反对多 agent 系统的文章，后来又发表了关于什么才真正有效的文章。请调和这两种立场。
+
+<!-- EN: Cognition published an argument against multi-agent systems and later published what actually works. Reconcile those two positions. -->
 
 **Source**: https://outcomeschool.com/blog/multi-agent-systems · https://outcomeschool.com/blog/ai-subagents
 
@@ -1506,7 +1620,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：Cognition 反对的不是「多个模型调用」，而是「平级 agent 互相传话导致上下文分叉、无人拥有真相」；后续「可行」的做法是把子 agent 降级为**函数**（只读调研、返回摘要/diff，父 agent 决策）。
 
-### 3. Your agent spends over half its first turn just finding the relevant code. How do you fix that?
+### 3. 你的 agent 在第一轮就花了一半以上时间仅仅在寻找相关代码。你如何解决？
+
+<!-- EN: Your agent spends over half its first turn just finding the relevant code. How do you fix that? -->
 
 **Source**: https://outcomeschool.com/blog/how-does-claude-code-work
 
@@ -1535,7 +1651,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Sierra
 
-### 1. Design a customer-facing agent for an airline that can cancel and rebook flights. How do you keep it from violating fare policy?
+### 1. 为航空公司设计一个面向客户的 agent，可以取消和改签航班。你如何防止它违反票价政策？
+
+<!-- EN: Design a customer-facing agent for an airline that can cancel and rebook flights. How do you keep it from violating fare policy? -->
 
 **Source**: https://outcomeschool.com/blog/how-do-llm-guardrails-work
 
@@ -1561,7 +1679,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：票价规则写成确定性引擎，模型只负责理解意图与表达；金额一律由引擎算，模型说出的数字必须对得上；执行时二次校验，报价变了就失败；确认前读回 PNR/费用/不可退部分，异常直接转人工。
 
-### 2. LLMs are non-deterministic, but a refund over $200 must never be auto-approved. Where's the line between prompting and code?
+### 2. LLM 是非确定性的，但超过 $200 的退款绝不能自动批准。prompt 与代码之间的界线在哪？
+
+<!-- EN: LLMs are non-deterministic, but a refund over $200 must never be auto-approved. Where's the line between prompting and code? -->
 
 **Source**: https://outcomeschool.com/blog/how-do-llm-guardrails-work
 
@@ -1588,7 +1708,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：分界线是「后果」而非「能力」——语气/分类/解释放提示词，金额、权限、阈值、不可逆动作必须写进代码。$200 规则落在三处：工具服务端强校验、agent 层不做自动批准、监控告警；且一律 fail-closed。
 
-### 3. Design the human-handoff path for a customer-service agent. When should it escalate, and what does a good handoff look like?
+### 3. 为客服 agent 设计人工转接路径。什么时候应该升级？一次好的转接应该是什么样？
+
+<!-- EN: Design the human-handoff path for a customer-service agent. When should it escalate, and what does a good handoff look like? -->
 
 **参考答案**
 
@@ -1623,7 +1745,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Harvey
 
-### 1. Design an agent that takes a draft NDA and returns a redlined Word document reflecting the firm's playbook, not a chat response.
+### 1. 设计一个 agent：输入一份 NDA 草稿，输出反映律所 playbook 的、带修订标记的 Word 文档，而不是一段聊天回复。
+
+<!-- EN: Design an agent that takes a draft NDA and returns a redlined Word document reflecting the firm's playbook, not a chat response. -->
 
 **Source**: https://outcomeschool.com/blog/ai-orchestration
 
@@ -1651,7 +1775,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Glean
 
-### 1. Design an agent that takes actions in enterprise tools (file a Jira ticket, draft an email) on a user's behalf. How do you handle permissions and evaluate it?
+### 1. 设计一个代表用户在企业工具中执行操作（提交 Jira 工单、起草邮件）的 agent。你如何处理权限并对其评测？
+
+<!-- EN: Design an agent that takes actions in enterprise tools (file a Jira ticket, draft an email) on a user's behalf. How do you handle permissions and evaluate it? -->
 
 **Source**: https://outcomeschool.com/blog/ai-orchestration
 
@@ -1677,7 +1803,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：以用户身份操作（OAuth 委派、最小 scope），绝不用超级账号；授权在网关逐请求执行；写操作要草稿确认、幂等键、不可逆动作二次确认、工单只能由人批准；评测看环境末态与越权拒绝率。
 
-### 2. Design agent orchestration across dozens of connected SaaS systems. Where is authorization enforced, and why can it not live in the model?
+### 2. 设计跨数十个已接入 SaaS 系统的 agent 编排。授权在哪里强制执行？为什么授权不能放在模型里？
+
+<!-- EN: Design agent orchestration across dozens of connected SaaS systems. Where is authorization enforced, and why can it not live in the model? -->
 
 **Source**: https://outcomeschool.com/blog/ai-orchestration
 
@@ -1707,7 +1835,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Abridge
 
-### 1. Design a service that turns the conversation into draft orders: labs, imaging, referrals, prescriptions, via tool calls against the EHR.
+### 1. 设计一个把对话转化为草稿医嘱的服务：化验、影像、转诊、处方，通过针对 EHR 的工具调用来完成。
+
+<!-- EN: Design a service that turns the conversation into draft orders: labs, imaging, referrals, prescriptions, via tool calls against the EHR. -->
 
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
@@ -1739,7 +1869,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 ## Palantir
 
-### 1. What is an ontology in the Palantir sense, and why put LLM agents on top of one instead of on raw tables and documents?
+### 1. 在 Palantir 意义上，本体（ontology）是什么？为什么要把 LLM agent 构建在本体之上，而不是直接建在原始表和文档上？
+
+<!-- EN: What is an ontology in the Palantir sense, and why put LLM agents on top of one instead of on raw tables and documents? -->
 
 **参考答案**
 
@@ -1761,7 +1893,9 @@ Java 特有的坑：虚拟线程世界里阻塞式 HTTP 客户端必须显式设
 
 **速记**：本体不是分类词典，而是"对象+属性+关系+**可执行动作**+权限与血缘"的企业运行模型。把 agent 放在本体上，等于把"写操作"限制在带前置条件、可校验、可审计的动作上；代价是建模慢、模型过期会污染所有回答。
 
-### 2. Design an LLM agent that files and updates work orders in a customer's ERP: real writes to a production system. How do you make that safe?
+### 2. 设计一个 LLM agent，在客户的 ERP 中创建并更新工单：也就是对生产系统的真实写入。你如何让这种写入是安全的？
+
+<!-- EN: Design an LLM agent that files and updates work orders in a customer's ERP: real writes to a production system. How do you make that safe? -->
 
 **参考答案**
 
