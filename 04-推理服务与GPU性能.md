@@ -47,7 +47,7 @@
 
 <!-- EN: Explain the prefill and decode phases. Why is prefill compute-bound and decode memory-bandwidth-bound? -->
 
-**Asked at**: Moonshot AI · NVIDIA · Together AI · ByteDance · Alibaba (Taobao/Tmall, Alibaba Cloud)
+**Asked at**: Moonshot AI · NVIDIA · Together AI · 字节跳动 · 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
 
 **参考答案**
@@ -120,7 +120,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 <!-- EN: What is speculative decoding? Why is output quality preserved, and when does it not help? -->
 
-**Asked at**: NVIDIA · Together AI · ByteDance
+**Asked at**: NVIDIA · Together AI · 字节跳动
 **Source**: https://outcomeschool.com/blog/speculative-decoding
 
 **参考答案**
@@ -146,7 +146,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 <!-- EN: Explain prefix caching / prompt caching. When should you use it, and what invalidates a cached prefix? -->
 
-**Asked at**: Moonshot AI · Character.AI · ByteDance
+**Asked at**: Moonshot AI · Character.AI · 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
 **参考答案**
@@ -202,7 +202,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 <!-- EN: Compare tensor, pipeline, data, sequence and expert parallelism. When do you combine them? -->
 
-**Asked at**: Google DeepMind · Meta · Amazon (AWS) · NVIDIA
+**Asked at**: Google DeepMind · Meta · Amazon（AWS） · NVIDIA
 
 **参考答案**
 
@@ -226,7 +226,7 @@ PagedAttention 借操作系统虚拟内存的思路：KV 存成**固定大小的
 
 <!-- EN: Estimate the GPU memory needed to serve a 70B model: weights, KV cache, activations, fragmentation. -->
 
-**Asked at**: NVIDIA · ByteDance
+**Asked at**: NVIDIA · 字节跳动
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/paged-attention-in-llms
 
 **参考答案**
@@ -316,7 +316,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 <!-- EN: When would you choose vLLM vs SGLang vs TensorRT-LLM vs a custom stack? -->
 
-**Asked at**: NVIDIA · Together AI · Tencent · ByteDance
+**Asked at**: NVIDIA · Together AI · 腾讯 · 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work · https://outcomeschool.com/blog/how-does-sglang-work · https://outcomeschool.com/blog/how-does-tensorrt-llm-work
 
 **参考答案**
@@ -338,7 +338,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 <!-- EN: How would you cut LLM serving cost by 10x? Enumerate every lever and rank them. -->
 
-**Asked at**: Microsoft · Amazon (AWS) · NVIDIA · Cursor (Anysphere)
+**Asked at**: Microsoft · Amazon（AWS） · NVIDIA · Cursor
 **Source**: https://www.youtube.com/watch?v=jV2sCj4lHYk · https://outcomeschool.com/blog/llm-inference-optimization
 
 **参考答案**
@@ -365,7 +365,7 @@ H100 SXM：峰值 3.35 TB/s，实际可达约 80–85%。70B BF16 权重 = 140 G
 
 <!-- EN: Your p99 latency doubled after a deploy with no model change. Walk through the diagnosis. -->
 
-**Asked at**: OpenAI · Amazon (AWS) · Databricks · Perplexity
+**Asked at**: OpenAI · Amazon（AWS） · Databricks · Perplexity
 
 **参考答案**
 
@@ -411,7 +411,7 @@ chunked prefill 把提示切成 `C` 个 token 的块（通常 512–2048），**
 
 <!-- EN: Explain disaggregated prefill/decode serving and when it pays for itself. -->
 
-**Asked at**: Moonshot AI · Groq · ByteDance
+**Asked at**: Moonshot AI · Groq · 字节跳动
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
 
 **参考答案**
@@ -1137,7 +1137,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: Take an 8x7B model: roughly what share of GPU memory goes to KV cache versus weights? What else occupies memory? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms
 
 **参考答案**
@@ -1166,7 +1166,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: A prefix cache hits, but the KV blocks have been offloaded to SSD. What is the fetch path, and does it have to go through host memory on the way back to the GPU? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-prompt-caching-work
 
 **参考答案**
@@ -1190,7 +1190,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: What do PagedAttention and continuous batching each solve in vLLM? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work
 
 **参考答案**
@@ -1216,7 +1216,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: Explain speculative decoding. Which models does it not help? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/speculative-decoding
 
 **参考答案**
@@ -1241,7 +1241,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: Why does prefill/decode disaggregation raise overall throughput, and when is it worth it for you? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/prefill-decode-disaggregation
 
 **参考答案**
@@ -1274,7 +1274,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: What is the core idea behind vLLM? What do PagedAttention and continuous batching each solve? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-vllm-work
 
 **参考答案**
@@ -1298,7 +1298,7 @@ bytes = 2 (K and V) × layers × kv_heads × head_dim × seq_len × batch × byt
 
 <!-- EN: What were the main improvements in FlashAttention v2 over v1? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/decoding-flash-attention
 
 **参考答案**
@@ -1323,7 +1323,7 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 <!-- EN: How do you quality-check training data before it goes into a run? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/llm-evaluation
 
 **参考答案**
@@ -1349,7 +1349,7 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 <!-- EN: Why do LLMs stream token by token, and what protocol sits underneath? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-token-streaming-work
 
 **参考答案**
@@ -1379,7 +1379,7 @@ v3（Hopper）加了异步 `wgmma` 与软/矩阵乘重叠——那是另一套�
 
 <!-- EN: Where do you look to cut response latency in an API service? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/prefill-vs-decode-llm-inference-optimization
 
 **参考答案**
@@ -1573,7 +1573,7 @@ ZeRO 依次把优化器状态、梯度、参数切分到各数据并行 rank 上
 
 **速记**：ZeRO-2 只切优化器状态和梯度，每卡仍持有完整参数；ZeRO-3 连参数一起切，能训单卡放不下的模型，代价是每层前反向各一次 all-gather、通信约 1.5 倍；装得下就选 ZeRO-2。
 
-### 4. 为什么 LLM 是一个 token 一个 token 地流式输出，底层用的是什么协议？
+### 4. LLM 为什么要逐 token 流式输出？它底下跑的是什么协议？
 
 <!-- EN: Why do LLMs stream token by token, and what protocol is underneath? -->
 

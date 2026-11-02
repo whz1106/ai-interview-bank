@@ -42,7 +42,7 @@
 
 <!-- EN: Explain the ReAct pattern and what it solves over chain-of-thought alone. -->
 
-**Asked at**: ByteDance · Tencent · Meituan
+**Asked at**: 字节跳动 · 腾讯 · 美团
 **Source**: https://outcomeschool.com/blog/react-agent
 
 **参考答案**
@@ -94,7 +94,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: What is the difference between structured output and function calling? -->
 
-**Asked at**: Mistral AI · Apple · JD.com · Meituan · Alibaba
+**Asked at**: Mistral AI · Apple · 京东 · 美团 · 阿里巴巴
 **Source**: https://outcomeschool.com/blog/how-does-function-calling-work-in-llms
 
 **参考答案**
@@ -116,7 +116,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: What is MCP (Model Context Protocol) and how does it differ from traditional function calling? -->
 
-**Asked at**: Microsoft · ByteDance · JD.com · Meituan · Alibaba
+**Asked at**: Microsoft · 字节跳动 · 京东 · 美团 · 阿里巴巴
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
 
 **参考答案**
@@ -163,7 +163,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: How does multi-agent orchestration work, and when does it break down? -->
 
-**Asked at**: Cognition · ByteDance · Meituan · JD.com · Alibaba
+**Asked at**: Cognition · 字节跳动 · 美团 · 京东 · 阿里巴巴
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
 
 **参考答案**
@@ -195,7 +195,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: Design memory for a long-running agent: what do you store, where, and how do you retrieve it? -->
 
-**Asked at**: Anthropic · JD.com · ByteDance
+**Asked at**: Anthropic · 京东 · 字节跳动
 **Source**: https://outcomeschool.com/blog/ai-agent-memory
 
 **参考答案**
@@ -237,7 +237,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: What makes an agent loop terminate correctly? How do you bound cost and steps? -->
 
-**Asked at**: ByteDance · Tencent · Meituan
+**Asked at**: 字节跳动 · 腾讯 · 美团
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
 
 **参考答案**
@@ -265,7 +265,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: How do you make an agent's actions reversible, or at least auditable, in a production system? -->
 
-**Asked at**: Palantir · JD.com · Alibaba
+**Asked at**: Palantir · 京东 · 阿里巴巴
 
 **参考答案**
 
@@ -285,7 +285,7 @@ ReAct = Reasoning + Acting。它不是模型，而是围绕 LLM 的一个**循�
 
 <!-- EN: Design human-in-the-loop approval for an agent that takes consequential actions. -->
 
-**Asked at**: OpenAI · Palantir · Alibaba · Tencent
+**Asked at**: OpenAI · Palantir · 阿里巴巴 · 腾讯
 
 **参考答案**
 
@@ -623,7 +623,7 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 <!-- EN: Where are the boundaries between Agent, Workflow, Orchestrator and Harness? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/ai-orchestration
 
 **参考答案**
@@ -647,7 +647,7 @@ Agent 本身只是简单的一半：检索 → 起草 → 引用。**"企业级"
 
 <!-- EN: How do Function Calling, Tool, MCP and Skill differ? Why does a Skill save tokens, and what risk does that bring? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/what-is-mcp-model-context-protocol
 
 **参考答案**
@@ -673,7 +673,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: How do you compress context as it approaches the window limit, and what must never be left to a summarising model? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-context-compaction-work
 
 **参考答案**
@@ -698,7 +698,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: A production agent keeps calling tools but never returns. How do you debug it? How do you defend against reasoning-chain error propagation, tool hallucination, broken JSON and infinite loops? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
 
 **参考答案**
@@ -727,7 +727,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: How do multiple agents communicate, and how do you stop two of them editing the same file? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/multi-agent-systems
 
 **参考答案**
@@ -757,7 +757,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: How do you define and measure a hallucination rate? How was that improvement number actually computed, and how do you tell stale content from hallucination? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/llm-evaluation
 
 **参考答案**
@@ -790,7 +790,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: Claude Code already exists, so why build your own coding agent? What differs, and how do you design layered context? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-claude-code-work
 
 **参考答案**
@@ -824,7 +824,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: How do you design an agent's assembly and execution chain, and how does it degrade gracefully? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/ai-orchestration
 
 **参考答案**
@@ -858,7 +858,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: A sub-agent discovers it needs an extra task mid-execution. How should that task flow and get approved? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/ai-subagents
 
 **参考答案**
@@ -890,7 +890,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: How do you constrain an agent's permissions to avoid unauthorised actions, especially anything touching real money? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
 
 **参考答案**
@@ -920,7 +920,7 @@ Skill 为什么省 token：工具的 schema 加使用说明**每一轮**都在�
 
 <!-- EN: Walk through ReAct: workflow, pros and cons, and how the loop avoids infinite or premature exit. -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/react-agent
 
 **参考答案**
@@ -956,7 +956,7 @@ ReAct 交替进行**思考**（为什么动手）、**动作**（工具 + 参数
 
 <!-- EN: How do you govern token cost: monitoring, attribution, quotas or caching? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-semantic-caching-work
 
 **参考答案**

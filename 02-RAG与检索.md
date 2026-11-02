@@ -65,7 +65,7 @@
 
 <!-- EN: How do you choose between a sparse retriever (BM25) and a dense retriever? When do you need both? -->
 
-**Asked at**: Microsoft · Perplexity · Glean · Tencent · JD.com · Meituan · DiDi
+**Asked at**: Microsoft · Perplexity · Glean · 腾讯 · 京东 · 美团 · 滴滴
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -89,7 +89,7 @@
 
 <!-- EN: What is a reranker, when should you use one, and what does a cross-encoder cost you? -->
 
-**Asked at**: Cohere · Microsoft · Perplexity · JD.com · Alibaba
+**Asked at**: Cohere · Microsoft · Perplexity · 京东 · 阿里巴巴
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -200,7 +200,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: Design permission-aware retrieval: users must never see content they can't access in the source system. -->
 
-**Asked at**: Microsoft · Databricks · Glean · Palantir · ByteDance
+**Asked at**: Microsoft · Databricks · Glean · Palantir · 字节跳动
 
 **参考答案**
 
@@ -222,7 +222,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: Compare HNSW, IVF-PQ and flat indexes. How do you pick, and what does recall@k cost in latency? -->
 
-**Asked at**: Tencent · Meituan · JD.com
+**Asked at**: 腾讯 · 美团 · 京东
 **Source**: https://outcomeschool.com/blog/how-does-approximate-nearest-neighbor-ann-search-work
 
 **参考答案**
@@ -266,7 +266,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: How do you keep an index fresh when the underlying corpus changes continuously? -->
 
-**Asked at**: Perplexity · Cursor · ByteDance
+**Asked at**: Perplexity · Cursor · 字节跳动
 
 **参考答案**
 
@@ -480,7 +480,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: Why run multi-way retrieval (dense + keyword + hierarchical)? What is the bad case for each route? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -503,7 +503,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: You retrieved 30 passages but only 6 fit the context budget. How do you choose? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -528,7 +528,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: Permission-aware knowledge base: filter by ACL before retrieval, or after? How do you monitor and prove no unauthorised content was retrieved? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -554,7 +554,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: When should the system trigger a web search and when should it answer directly? How do you tell "the model did not know it needed retrieval" from "it knew but did not execute"? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/ai-agent-loop
 
 **参考答案**
@@ -579,7 +579,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: How do you chunk and retrieve when a long document spans chapters and a retrieved fragment points at another document? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/chunking-strategies-for-rag
 
 **参考答案**
@@ -611,7 +611,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: Why use both sparse and dense retrieval in RAG, and how do you tune the weights in production? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-hybrid-search-work
 
 **参考答案**
@@ -640,7 +640,7 @@ HyDE：不去 embedding **问题**，而是让 LLM 先写一份**假设性答案
 
 <!-- EN: What drives the choice of BGE as an embedding model, and how do you build and tune a FAISS index? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-a-vector-database-work
 
 **参考答案**
@@ -668,7 +668,7 @@ FAISS 索引构建与调优：
 
 <!-- EN: How do you chunk documents, and how do you trade chunk size against completeness? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/chunking-strategies-for-rag
 
 **参考答案**
@@ -695,7 +695,7 @@ FAISS 索引构建与调优：
 
 <!-- EN: What if one generation has to reason across several documents? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-a-reranker-work
 
 **参考答案**
@@ -726,7 +726,7 @@ FAISS 索引构建与调优：
 
 <!-- EN: Beyond truncation, what are better ways to compress a long conversation? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/how-does-context-compaction-work
 
 **参考答案**

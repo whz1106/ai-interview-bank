@@ -66,7 +66,7 @@ $$\text{Attn}(Q,K,V)=\text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
 
 <!-- EN: What is the KV cache, and what are its memory implications at scale? Derive the formula. -->
 
-**Asked at**: OpenAI · xAI · Mistral AI · Amazon · Apple · NVIDIA · Together AI · Character.AI · ByteDance · Tencent · Meituan · Alibaba (Taobao/Tmall, Alibaba Cloud)
+**Asked at**: OpenAI · xAI · Mistral AI · Amazon（AWS） · Apple · NVIDIA · Together AI · Character.AI · 字节跳动 · 腾讯 · 美团 · 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/kv-cache-in-llms · https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
@@ -94,7 +94,7 @@ $$\text{bytes}=2\cdot L\cdot H_{kv}\cdot d_{head}\cdot T\cdot B\cdot b$$
 
 <!-- EN: What are Multi-Query Attention (MQA) and Grouped-Query Attention (GQA), and what do they trade away? -->
 
-**Asked at**: Meta · Mistral AI · ByteDance · Meituan · DiDi
+**Asked at**: Meta · Mistral AI · 字节跳动 · 美团 · 滴滴
 **Source**: https://outcomeschool.com/blog/grouped-query-attention
 
 **参考答案**
@@ -120,7 +120,7 @@ $$\text{bytes}=2\cdot L\cdot H_{kv}\cdot d_{head}\cdot T\cdot B\cdot b$$
 
 <!-- EN: What is Multi-head Latent Attention (MLA) and why did DeepSeek introduce it? -->
 
-**Asked at**: DeepSeek · Moonshot AI · ByteDance · Meituan
+**Asked at**: DeepSeek · Moonshot AI · 字节跳动 · 美团
 **Source**: https://outcomeschool.com/blog/kv-cache-compression
 
 **参考答案**
@@ -145,7 +145,7 @@ MLA 把**缓存大小**与**头数**解耦。它不缓存 K 和 V，而是每个
 
 <!-- EN: Explain FlashAttention. It does not reduce FLOPs, so why is it faster? -->
 
-**Asked at**: Together AI · Tencent
+**Asked at**: Together AI · 腾讯
 **Source**: https://outcomeschool.com/blog/decoding-flash-attention
 
 **参考答案**
@@ -173,7 +173,7 @@ FlashAttention 把 Q 切成能进 SRAM（约 100–200 KB）的块，流式读�
 
 <!-- EN: How does Byte Pair Encoding work, and what are its failure modes (numbers, code, non-Latin scripts)? -->
 
-**Asked at**: Alibaba · Sarvam AI · Hugging Face
+**Asked at**: 阿里巴巴 · Sarvam AI · Hugging Face
 **Source**: https://outcomeschool.com/blog/bpe-in-llms · https://www.youtube.com/watch?v=sK2s9I84EVI
 
 **参考答案**
@@ -228,7 +228,7 @@ RoPE 胜出的原因是：它不需要偏置张量就能拿到相对位置——
 
 <!-- EN: Explain RoPE and how position interpolation / YaRN extend context beyond the trained length. -->
 
-**Asked at**: Meta · Moonshot AI · Alibaba · Tencent · Meituan
+**Asked at**: Meta · Moonshot AI · 阿里巴巴 · 腾讯 · 美团
 **Source**: https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
@@ -273,7 +273,7 @@ Chinchilla 拟合出 $L(N,D)=E+A/N^{\alpha}+B/D^{\beta}$，结论是：在**固�
 
 <!-- EN: What is a mixture-of-experts architecture and how does it scale capacity without scaling FLOPs? -->
 
-**Asked at**: Mistral AI · Cohere · DeepSeek · Moonshot AI · Zhipu AI · Alibaba · Tencent · Meituan · Alibaba (Taobao/Tmall, Alibaba Cloud)
+**Asked at**: Mistral AI · Cohere · DeepSeek · Moonshot AI · 智谱 AI · 阿里巴巴 · 腾讯 · 美团 · 阿里巴巴（淘天 / 阿里云）
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1348,7 +1348,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Walk through self-attention end to end, and explain why the dot product is divided by sqrt(d_k). -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/math-behind-attention-qkv
 
 **参考答案**
@@ -1375,7 +1375,7 @@ $$h_t^{(k)} = \text{Block}_k\big(\text{proj}([\,h_t^{(k-1)};\ \text{Emb}(x_{t+k}
 
 <!-- EN: Trace the evolution from MHA to MQA, GQA and MLA. What does each step actually save? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/grouped-query-attention
 
 **参考答案**
@@ -1401,7 +1401,7 @@ MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出
 
 <!-- EN: How does Qwen3 switch between thinking and non-thinking mode? How do you train and serve one model that does both? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/large-reasoning-models
 
 **参考答案**
@@ -1423,7 +1423,7 @@ MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出
 
 <!-- EN: Can a decoder-only model beat an encoder-only one on a classification task? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
@@ -1447,7 +1447,7 @@ MLA 把 KV 压成共享隐向量，再按头即时重建；DeepSeek 额外留出
 
 <!-- EN: Why does the FFN expand and then contract? What does SwiGLU buy you over ReLU or GELU? -->
 
-**Asked at**: ByteDance
+**Asked at**: 字节跳动
 **Source**: https://outcomeschool.com/blog/feed-forward-networks-in-llms
 
 **参考答案**
@@ -1474,7 +1474,7 @@ SwiGLU 改的是激活函数和参数量：
 
 <!-- EN: Why do generative LLMs use decoder-only rather than encoder-decoder? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
@@ -1501,7 +1501,7 @@ SwiGLU 改的是激活函数和参数量：
 
 <!-- EN: What is the difference between pre-norm and post-norm, and how does it affect training stability? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/encoder-vs-decoder-in-transformers
 
 **参考答案**
@@ -1527,7 +1527,7 @@ SwiGLU 改的是激活函数和参数量：
 
 <!-- EN: How does RoPE achieve relative position awareness using an absolute position encoding? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/math-behind-rope-rotary-position-embedding
 
 **参考答案**
@@ -1558,7 +1558,7 @@ RoPE 在若干二维子空间里，把 query 和 key 按**与位置成正比的�
 
 <!-- EN: Why is everyone exploring MoE, and what is the core advantage over dense? -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -1590,7 +1590,7 @@ MoE 把**总参数**与**每 token 算力**解耦：容量（知识）可以变�
 
 <!-- EN: Take Qwen and DeepSeek as examples: introduce a model you know well and compare the two technically. -->
 
-**Asked at**: Tencent
+**Asked at**: 腾讯
 **Source**: https://outcomeschool.com/blog/mixture-of-experts
 
 **参考答案**
@@ -2099,8 +2099,8 @@ Rust 的两个具体收益：真线程（rayon 并行预分词，Python 的 GIL 
 
 | 家族 | 形状 |
 | :--- | :--- |
-| ChatML | `<|im_start|>user\n...<|im_end|>` |
-| Llama 3 | `<|start_header_id|>user<|end_header_id|>` + `<|eot_id|>` |
+| ChatML | `<\|im_start\|>user\n...<\|im_end\|>` |
+| Llama 3 | `<\|start_header_id\|>user<\|end_header_id\|>` + `<\|eot_id\|>` |
 | Mistral | `[INST] ... [/INST]` 且带 BOS |
 | Gemma | `<start_of_turn>user` … `<end_of_turn>` |
 
